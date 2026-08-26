@@ -47,6 +47,24 @@ MUTATIONS = [
         "      - 'enc'",
     ),
     (
+        "network/c2_commodity_rat_nonstandard_port.yml",
+        "include 8080, which the same data carried C2 on but is ordinary HTTP-alt",
+        "      - 1604    # DarkComet default",
+        "      - 8080\n      - 1604    # DarkComet default",
+    ),
+    (
+        "network/c2_commodity_rat_nonstandard_port.yml",
+        "include TrueConf's own service port 4307 (legitimate by design)",
+        "      - 7777    # DCRat",
+        "      - 4307\n      - 7777    # DCRat",
+    ),
+    (
+        "network/c2_commodity_rat_nonstandard_port.yml",
+        "drop the internal-address filter (fires on RFC1918 and loopback)",
+        "  condition: selection and not filter_internal",
+        "  condition: selection",
+    ),
+    (
         "windows/clickfix_run_dialog_execution.yml",
         "drop the explorer.exe parent constraint",
         "    ParentImage|endswith: '\\explorer.exe'\n",

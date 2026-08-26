@@ -69,3 +69,25 @@ def test_empty_directory_is_an_error_not_a_pass(tmp_path, capsys):
     empty.mkdir()
     assert main(["test", str(empty)]) == 2
     assert "no rules" in capsys.readouterr().err.lower()
+
+
+def test_exit_nonzero_on_an_orphaned_test_file(tmp_path, capsys):
+    """A test file whose rule no longer exists must not pass silently. It is the
+    mirror of an untested rule, and arguably worse: the file sitting in the
+    directory implies coverage that is not there."""
+    rules = build(tmp_path)
+    (rules / "deleted_rule.test.yml").write_text(
+        (rules / "net_user_add.test.yml").read_text(encoding="utf-8"), encoding="utf-8"
+    )
+    assert main(["test", str(rules)]) == 1
+    assert "orphan" in capsys.readouterr().out.lower()
+
+
+def test_allow_untested_does_not_also_tolerate_orphans(tmp_path):
+    """Adopting a rule set explains untested rules. It does not explain a test
+    file with no rule, which is always a mistake someone made."""
+    rules = build(tmp_path)
+    (rules / "deleted_rule.test.yml").write_text(
+        (rules / "net_user_add.test.yml").read_text(encoding="utf-8"), encoding="utf-8"
+    )
+    assert main(["test", str(rules), "--allow-untested"]) == 1

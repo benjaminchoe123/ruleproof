@@ -59,14 +59,26 @@ def _cmd_test(args):
     for path in report.untested:
         print(f"  UNTESTED  {path}")
 
+    for path in report.orphaned:
+        print(f"  ORPHANED  {path}  (test file with no rule beside it)")
+
     cases = sum(r.total for r in report.results)
     print(
         f"\n{report.tested} rule(s) tested, {cases} case(s), "
         f"{len(report.failures)} failure(s), {len(report.untested)} untested, "
-        f"{len(report.load_errors)} error(s)"
+        f"{len(report.orphaned)} orphaned, {len(report.load_errors)} error(s)"
     )
 
     if report.failures or report.load_errors:
+        return 1
+    if report.orphaned:
+        # Deliberately not covered by --allow-untested. Adopting somebody else's
+        # rule set explains rules without tests; nothing explains a test file
+        # whose rule does not exist. That is always a mistake someone made.
+        print(
+            "\norphaned test file(s): a rule was renamed or deleted and its tests "
+            "were left behind"
+        )
         return 1
     if report.untested and not args.allow_untested:
         print("\nuntested rules are failures by default; pass --allow-untested to tolerate them")

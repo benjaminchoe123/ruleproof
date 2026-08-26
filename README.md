@@ -8,7 +8,7 @@ thing it was written for, and stays quiet on the things it wasn't.
 
 ```console
 $ ruleproof test rules
-6 rule(s) tested, 40 case(s), 0 failure(s), 0 untested, 0 error(s)
+7 rule(s) tested, 54 case(s), 0 failure(s), 0 untested, 0 orphaned, 0 error(s)
 $ echo $?
 0
 ```
@@ -20,8 +20,9 @@ $ ruleproof test rules      # after someone loosens a rule
   FAIL   Local Account Created via net.exe
          false positive: querying one account - contains ' user ' but no /add
   UNTESTED  rules/windows/lsass_dump.yml
+  ORPHANED  rules/windows/renamed_rule.test.yml  (test file with no rule beside it)
 
-5 rule(s) tested, 35 case(s), 1 failure(s), 1 untested, 0 error(s)
+6 rule(s) tested, 49 case(s), 1 failure(s), 1 untested, 1 orphaned, 0 error(s)
 
 untested rules are failures by default; pass --allow-untested to tolerate them
 $ echo $?
@@ -48,6 +49,15 @@ to act on them:
 |---|---|---|
 | **missed detection** | a `true_positives` case did not fire | the rule was silent during the thing it exists to catch |
 | **false positive** | a `true_negatives` case fired | this is how a rule gets muted in production, after which it protects nothing |
+
+A third kind was added after the tool caught it happening here: an **orphaned** test file,
+one with no rule beside it. It is the mirror of an untested rule and the same failure in the
+other direction — a rule with no tests scores nothing, a test with no rule tests nothing, and
+both report green. This one is arguably worse, because the file sitting in the directory
+implies coverage that is not there. It happens when a rule is renamed or deleted and its tests
+are left behind, and unlike untested rules it is **not** covered by `--allow-untested`:
+adopting somebody else's rule set explains rules without tests, but nothing explains a test
+file whose rule does not exist.
 
 ## Coverage against reality, not against your own claims
 
@@ -214,17 +224,18 @@ Sigma into SIEM queries — use [pySigma](https://github.com/SigmaHQ/pySigma) fo
 
 ## The rules in this repo
 
-Six rules across Windows, Linux, and network telemetry, each with true positives and
+Seven rules across Windows, Linux, and network telemetry, each with true positives and
 near-miss negatives:
 
-| rule | ATT&CK |
-|---|---|
-| Local account created via `net.exe` | T1136.001 |
-| PowerShell encoded command | T1059.001 |
-| ClickFix paste-and-run via the Run dialog | T1204.004 |
-| Scheduled task from a user-writable path | T1053.005 |
-| Web server process spawns a shell | T1505.003 |
-| Outbound connection to known C2 infrastructure | T1071.001 |
+| rule | ATT&CK | why this one |
+|---|---|---|
+| Local account created via `net.exe` | T1136.001 | |
+| PowerShell encoded command | T1059.001 | |
+| ClickFix paste-and-run via the Run dialog | T1204.004 | |
+| Scheduled task from a user-writable path | T1053.005 | |
+| Web server process spawns a shell | T1505.003 | |
+| Outbound connection to known C2 infrastructure | T1071.001 | |
+| Commodity RAT C2 on a non-standard port | T1571 | **chosen by `gap`** |
 
 They are drawn from activity in the [threat-intel-pipeline][pipeline] weekly reports —
 the ClickFix rule covers the SmartApeSG/ClearFake/FAKEUPDATES delivery chain, the web-shell
@@ -234,6 +245,17 @@ belongs to, and the C2 rule uses indicators from
 
 That pairing is the point of building this one second: **the pipeline says what is being
 exploited; ruleproof says whether I would catch it.**
+
+The last rule in that table was not chosen by intuition. `ruleproof gap` reported T1571 as the
+second most-observed technique in the pipeline's data — 9 sources — with no detection at all,
+so it was the obvious next one to write. Adding it moved observed coverage from **26% to 28%**.
+
+Writing it also produced the most useful decision in the rule set. The same week's data carried
+C2 on ports **8080** and **4307**, and both are deliberately excluded: 8080 is ordinary
+HTTP-alt, and 4307 is TrueConf's own service port — those entries were vulnerabilities in a
+legitimate server, not C2. Including them would have made the rule fire on normal traffic, and
+a rule that fires on normal traffic gets muted. Two of the mutation checks exist specifically
+to prove that exclusion is tested rather than merely intended.
 
 [pipeline]: https://github.com/benjaminchoe123/threat-intel-pipeline
 [w35]: https://github.com/benjaminchoe123/threat-intel-pipeline/blob/main/vault/reports/2026-W35.md

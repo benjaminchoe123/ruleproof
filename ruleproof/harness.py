@@ -143,11 +143,39 @@ def discover(rules_dir):
     return sorted(found, key=lambda d: str(d.rule_path))
 
 
+def orphaned_tests(rules_dir):
+    """Test files with no rule beside them.
+
+    The mirror of an untested rule, and the same failure in the other direction:
+    a rule with no tests scores nothing, and a test with no rule tests nothing.
+    Both report green. This one is arguably worse, because the file sitting in
+    the directory implies coverage that does not exist — which is exactly what
+    happens when a rule is renamed or deleted and its tests are left behind.
+
+    A rule may be `.yml` or `.yaml`, so both have to be checked before calling a
+    test file orphaned.
+    """
+    rules_dir = Path(rules_dir)
+    suffixes = (TEST_SUFFIX, ".test.yaml")
+    orphans = []
+    for path in sorted(rules_dir.rglob("*")):
+        if not path.is_file():
+            continue
+        matched = next((suf for suf in suffixes if path.name.endswith(suf)), None)
+        if matched is None:
+            continue
+        stem = path.name[: -len(matched)]
+        if not any((path.with_name(stem + ext)).exists() for ext in (".yml", ".yaml")):
+            orphans.append(path)
+    return orphans
+
+
 @dataclass
 class Report:
     results: list = field(default_factory=list)
     untested: list = field(default_factory=list)
     load_errors: list = field(default_factory=list)
+    orphaned: list = field(default_factory=list)
     covered_techniques: set = field(default_factory=set)
     claimed_techniques: set = field(default_factory=set)
 
@@ -162,11 +190,13 @@ class Report:
     @property
     def ok(self):
         """Green requires every rule to load, pass, AND have tests at all."""
-        return not self.failures and not self.untested and not self.load_errors
+        return (not self.failures and not self.untested
+                and not self.load_errors and not self.orphaned)
 
 
 def run_all(rules_dir):
     report = Report()
+    report.orphaned = orphaned_tests(rules_dir)
     for found in discover(rules_dir):
         try:
             rule = Rule.from_file(found.rule_path)

@@ -1,0 +1,53 @@
+title: Commodity RAT Command-and-Control on a Non-Standard Port
+id: 9f3c2d18-7a4b-4e51-b6c0-1d8e5a2f3b47
+status: experimental
+description: >
+  Detects an outbound connection to a public address on a port strongly
+  associated with commodity remote-access-trojan and botnet command-and-control,
+  rather than to a specific indicator. Indicator lists age out within days; the
+  port choices of AsyncRAT, DCRat, DarkComet and Aisuru have not moved in years,
+  so this keeps firing after the addresses are dead.
+
+  Written because `ruleproof gap` reported T1571 as the second most-observed
+  technique in the threat-intel pipeline's data (9 sources) with no detection
+  at all. The port list is drawn from C2 endpoints the pipeline actually
+  observed, not from a generic "high port" heuristic.
+
+  Two ports the same data carried C2 on are deliberately **excluded**: 8080,
+  which is ordinary HTTP-alt, and 4307, which is TrueConf's own service port —
+  the week's TrueConf entries were vulnerabilities in a legitimate server, not
+  C2. Including either would fire on normal traffic, and a rule that fires on
+  normal traffic gets muted, after which it protects nothing.
+references:
+  - https://attack.mitre.org/techniques/T1571/
+  - https://github.com/benjaminchoe123/threat-intel-pipeline/blob/main/vault/reports/2026-W35.md
+author: Benjamin Choe
+date: 2026-08-26
+logsource:
+  category: network_connection
+detection:
+  selection:
+    DestinationPort:
+      - 1604    # DarkComet default
+      - 7777    # DCRat
+      - 8808    # AsyncRAT
+      - 9035    # Aisuru
+      - 30700   # AsyncRAT
+      - 34567   # Aisuru
+  filter_internal:
+    DestinationIp|startswith:
+      - '10.'
+      - '192.168.'
+      - '172.16.'
+      - '127.'
+  condition: selection and not filter_internal
+falsepositives:
+  - Internal applications reached over a public address that happen to use one of
+    these ports — game servers and media tools are the usual culprits on 7777
+  - Security tooling deliberately connecting to known C2 for research
+  - A host on a network where one of these ports has been reassigned to a
+    legitimate internal service
+level: high
+tags:
+  - attack.command_and_control
+  - attack.t1571

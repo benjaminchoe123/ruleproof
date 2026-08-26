@@ -191,3 +191,56 @@ def test_a_technique_is_not_covered_if_its_only_rule_is_untested(tmp_path):
     report = run_all(write_pair(tmp_path, suite_yaml=None))
     assert report.covered_techniques == set()
     assert report.claimed_techniques == {"T1136.001"}
+
+
+# ---------------------------------------------------------------------------
+# Orphaned test files.
+#
+# Found by using the tool: dropping a `<stem>.test.yml` into the rules directory
+# with no matching rule produced "0 untested, 0 error(s)" and exit 0. The suite
+# was reporting green over a test file that tested nothing.
+#
+# That is this project's own thesis inverted. `untested is a result, not an
+# absence` says a rule with no tests must fail rather than score nothing; the
+# mirror case is a test with no rule, which happens when a rule is renamed or
+# deleted and its tests are left behind. Both are silence that looks like health,
+# and this one was worse, because the file sitting there implies coverage exists.
+# ---------------------------------------------------------------------------
+
+def test_a_test_file_with_no_rule_is_reported(tmp_path):
+    rules = tmp_path / "rules"
+    rules.mkdir()
+    (rules / "real.yml").write_text(RULE_YAML, encoding="utf-8")
+    (rules / "real.test.yml").write_text(SUITE_YAML, encoding="utf-8")
+    (rules / "deleted_rule.test.yml").write_text(SUITE_YAML, encoding="utf-8")
+
+    report = run_all(rules)
+    assert [p.name for p in report.orphaned] == ["deleted_rule.test.yml"]
+
+
+def test_orphaned_tests_make_the_report_not_ok(tmp_path):
+    rules = tmp_path / "rules"
+    rules.mkdir()
+    (rules / "real.yml").write_text(RULE_YAML, encoding="utf-8")
+    (rules / "real.test.yml").write_text(SUITE_YAML, encoding="utf-8")
+    (rules / "ghost.test.yml").write_text(SUITE_YAML, encoding="utf-8")
+
+    assert run_all(rules).ok is False
+
+
+def test_a_matched_test_file_is_never_called_orphaned(tmp_path):
+    rules = tmp_path / "rules"
+    rules.mkdir()
+    (rules / "real.yml").write_text(RULE_YAML, encoding="utf-8")
+    (rules / "real.test.yml").write_text(SUITE_YAML, encoding="utf-8")
+    assert run_all(rules).orphaned == []
+
+
+def test_a_yaml_suffixed_rule_still_claims_its_test_file(tmp_path):
+    """`discover` accepts .yml and .yaml for rules. An orphan check that only
+    knew about .yml would call every .yaml rule's tests orphaned."""
+    rules = tmp_path / "rules"
+    rules.mkdir()
+    (rules / "real.yaml").write_text(RULE_YAML, encoding="utf-8")
+    (rules / "real.test.yml").write_text(SUITE_YAML, encoding="utf-8")
+    assert run_all(rules).orphaned == []

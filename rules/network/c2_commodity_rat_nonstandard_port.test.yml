@@ -1,0 +1,74 @@
+true_positives:
+  - name: AsyncRAT listener on 8808
+    event:
+      DestinationIp: '50.116.42.10'
+      DestinationPort: 8808
+      Image: 'C:\Users\bob\AppData\Roaming\svc.exe'
+  - name: AsyncRAT listener on 30700
+    event:
+      DestinationIp: '80.190.77.86'
+      DestinationPort: 30700
+      Image: 'C:\Users\bob\AppData\Local\Temp\update.exe'
+  - name: DCRat listener on 7777
+    event:
+      DestinationIp: '69.167.11.198'
+      DestinationPort: 7777
+      Image: 'C:\Users\bob\Downloads\invoice.exe'
+  - name: DarkComet listener on 1604
+    event:
+      DestinationIp: '132.243.172.182'
+      DestinationPort: 1604
+      Image: 'C:\Windows\Temp\a.exe'
+  - name: Aisuru botnet C2 on 34567
+    event:
+      DestinationIp: '64.227.187.82'
+      DestinationPort: 34567
+      Image: '/usr/bin/busybox'
+  - name: a port match to an address not on any indicator list
+    event:
+      DestinationIp: '203.0.113.77'
+      DestinationPort: 9035
+      Image: 'C:\Users\bob\AppData\Roaming\x.exe'
+
+true_negatives:
+  # The whole reason this rule is scoped to specific ports rather than "high port".
+  - name: ordinary HTTPS
+    event:
+      DestinationIp: '140.82.121.4'
+      DestinationPort: 443
+      Image: 'C:\Program Files\Git\bin\git.exe'
+  - name: ordinary HTTP-alt on 8080, which the same week's data also carried C2 on
+    event:
+      DestinationIp: '203.0.113.10'
+      DestinationPort: 8080
+      Image: 'C:\Program Files\Mozilla Firefox\firefox.exe'
+  - name: TrueConf on its own service port 4307, which is legitimate by design
+    event:
+      DestinationIp: '198.51.100.20'
+      DestinationPort: 4307
+      Image: 'C:\Program Files\TrueConf\Client\TrueConf.exe'
+  - name: an ephemeral high port that is not on the list
+    event:
+      DestinationIp: '203.0.113.55'
+      DestinationPort: 49232
+      Image: 'C:\Windows\System32\svchost.exe'
+  - name: internal RFC1918 destination on a listed port
+    event:
+      DestinationIp: '10.4.2.9'
+      DestinationPort: 8808
+      Image: 'C:\Program Files\Internal\agent.exe'
+  - name: internal 172.16 destination on a listed port
+    event:
+      DestinationIp: '172.16.8.3'
+      DestinationPort: 7777
+      Image: 'C:\Program Files\Internal\game-server.exe'
+  - name: loopback on a listed port, a developer running a service locally
+    event:
+      DestinationIp: '127.0.0.1'
+      DestinationPort: 30700
+      Image: 'C:\Program Files\nodejs\node.exe'
+  - name: a port one digit away from a listed one
+    event:
+      DestinationIp: '203.0.113.90'
+      DestinationPort: 8809
+      Image: 'C:\Users\bob\AppData\Roaming\x.exe'
