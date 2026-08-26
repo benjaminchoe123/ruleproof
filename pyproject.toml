@@ -1,0 +1,36 @@
+[project]
+name = "ruleproof"
+version = "0.1.0"
+description = "Unit tests for Sigma detection rules."
+requires-python = ">=3.12"
+dependencies = ["PyYAML>=6.0"]
+
+[project.scripts]
+ruleproof = "ruleproof.cli:main"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+# F: pyflakes (unused imports/names, real bugs)
+# E,W: pycodestyle
+# I: import sorting
+# B: bugbear (mutable defaults, late-binding closures)
+# UP: pyupgrade
+select = ["F", "E", "W", "I", "B", "UP"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["ruleproof"]
+
+[tool.ruff.lint.per-file-ignores]
+# Test files carry long inline YAML fixtures by design; wrapping them would make
+# the thing under test less readable than the code testing it.
+"tests/*" = ["E501"]
+"scripts/*" = ["E501"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# Surface warnings as failures: a rule engine that emits a DeprecationWarning
+# under a new Python is exactly the thing that should stop a build.
+filterwarnings = ["error"]
