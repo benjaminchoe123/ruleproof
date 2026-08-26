@@ -1,0 +1,28 @@
+true_positives:
+  - name: task launching a binary from AppData
+    event:
+      EventID: 4688
+      Image: 'C:\Windows\System32\schtasks.exe'
+      CommandLine: 'schtasks /create /sc minute /mo 10 /tn Updater /tr C:\Users\alice\AppData\Roaming\svc.exe'
+  - name: task launching from the public profile
+    event:
+      EventID: 4688
+      Image: 'C:\Windows\System32\schtasks.exe'
+      CommandLine: 'schtasks /Create /TN Sync /TR "C:\Users\Public\sync.vbs" /SC ONLOGON'
+
+true_negatives:
+  - name: task pointing at a signed binary in System32
+    event:
+      EventID: 4688
+      Image: 'C:\Windows\System32\schtasks.exe'
+      CommandLine: 'schtasks /create /tn Defrag /tr C:\Windows\System32\defrag.exe /sc weekly'
+  - name: querying tasks rather than creating one
+    event:
+      EventID: 4688
+      Image: 'C:\Windows\System32\schtasks.exe'
+      CommandLine: 'schtasks /query /fo LIST'
+  - name: deleting a task that lives in AppData
+    event:
+      EventID: 4688
+      Image: 'C:\Windows\System32\schtasks.exe'
+      CommandLine: 'schtasks /delete /tn AppDataTask /f'

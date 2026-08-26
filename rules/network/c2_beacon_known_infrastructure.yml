@@ -1,0 +1,36 @@
+title: Outbound Connection to Known C2 Infrastructure
+id: 6b1e0a54-2c9e-4b7a-9a1f-0f2b1c4d5e06
+status: experimental
+description: >
+  Detects an outbound connection to command-and-control infrastructure observed
+  in the threat-intel pipeline for 2026-W35 (Cobalt Strike and AsyncRAT
+  listeners published via ThreatFox). Indicator rules like this one age out
+  quickly; the point of pinning it with tests is that the rule keeps evaluating
+  correctly as the indicator list is edited.
+references:
+  - https://attack.mitre.org/techniques/T1071/001/
+  - https://github.com/benjaminchoe123/threat-intel-pipeline/blob/main/vault/reports/2026-W35.md
+author: Benjamin Choe
+date: 2026-08-25
+logsource:
+  category: network_connection
+detection:
+  selection:
+    DestinationIp:
+      - '38.147.185.54'
+      - '177.3.89.54'
+      - '182.92.78.7'
+      - '80.190.77.86'
+      - '50.116.42.10'
+  filter_internal:
+    DestinationIp|startswith:
+      - '10.'
+      - '192.168.'
+  condition: selection and not filter_internal
+falsepositives:
+  - Indicator reuse after the host is reassigned to a legitimate tenant
+  - Security tooling deliberately probing known-bad infrastructure
+level: critical
+tags:
+  - attack.command_and_control
+  - attack.t1071.001

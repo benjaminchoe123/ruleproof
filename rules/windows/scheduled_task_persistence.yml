@@ -1,0 +1,33 @@
+title: Scheduled Task Created from a User-Writable Path
+id: 6b1e0a54-2c9e-4b7a-9a1f-0f2b1c4d5e04
+status: experimental
+description: >
+  Detects schtasks.exe creating a task whose action points at a user-writable
+  directory. Scheduled tasks are the most common way commodity malware survives
+  a reboot, and the give-away is not the task itself but that it runs something
+  out of Temp, AppData or the public profile.
+references:
+  - https://attack.mitre.org/techniques/T1053/005/
+author: Benjamin Choe
+date: 2026-08-25
+logsource:
+  product: windows
+  category: process_creation
+detection:
+  selection:
+    EventID: 4688
+    Image|endswith: '\schtasks.exe'
+    CommandLine|contains: ' /create'
+  suspicious_path:
+    CommandLine|contains:
+      - '\AppData\'
+      - '\Temp\'
+      - '\Users\Public\'
+      - '\ProgramData\'
+  condition: selection and suspicious_path
+falsepositives:
+  - Software updaters that stage a helper binary in ProgramData
+level: high
+tags:
+  - attack.persistence
+  - attack.t1053.005

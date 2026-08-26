@@ -1,0 +1,35 @@
+title: PowerShell Encoded Command
+id: 6b1e0a54-2c9e-4b7a-9a1f-0f2b1c4d5e02
+status: experimental
+description: >
+  Detects PowerShell invoked with a base64-encoded command block. Encoding is
+  used to carry a payload past command-line inspection and to survive quoting
+  when the command is delivered through a lure, a scheduled task, or a service.
+references:
+  - https://attack.mitre.org/techniques/T1059/001/
+author: Benjamin Choe
+date: 2026-08-25
+logsource:
+  product: windows
+  category: process_creation
+detection:
+  selection:
+    EventID: 4688
+    Image|endswith:
+      - '\powershell.exe'
+      - '\pwsh.exe'
+  encoded_flag:
+    CommandLine|contains:
+      - ' -enc '
+      - ' -encodedcommand '
+      - ' -ec '
+      - ' /enc '
+  condition: selection and encoded_flag
+falsepositives:
+  - Configuration management tools that wrap scripts in encoded commands
+  - Some vendor installers invoke encoded PowerShell during setup
+level: high
+tags:
+  - attack.execution
+  - attack.defense_evasion
+  - attack.t1059.001

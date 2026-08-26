@@ -1,0 +1,38 @@
+true_positives:
+  - name: classic -enc payload
+    event:
+      EventID: 4688
+      Image: 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe'
+      CommandLine: 'powershell.exe -nop -w hidden -enc SQBFAFgAIAAoAE4AZQB3AC0A'
+  - name: fully spelled -EncodedCommand
+    event:
+      EventID: 4688
+      Image: 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe'
+      CommandLine: 'powershell -NoProfile -EncodedCommand SQBFAFgA'
+  - name: pwsh 7 with the short -ec form
+    event:
+      EventID: 4688
+      Image: 'C:\Program Files\PowerShell\7\pwsh.exe'
+      CommandLine: 'pwsh -ec SQBFAFgAIAA='
+
+true_negatives:
+  - name: ordinary script execution
+    event:
+      EventID: 4688
+      Image: 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe'
+      CommandLine: 'powershell.exe -File C:\Scripts\inventory.ps1'
+  - name: -Encoding is a different parameter and must not trip the rule
+    event:
+      EventID: 4688
+      Image: 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe'
+      CommandLine: 'powershell.exe -Command Get-Content log.txt -Encoding utf8'
+  - name: the word encoded appearing inside a file path
+    event:
+      EventID: 4688
+      Image: 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe'
+      CommandLine: 'powershell.exe -File C:\data\encoded\report.ps1'
+  - name: a different interpreter entirely
+    event:
+      EventID: 4688
+      Image: 'C:\Windows\System32\cmd.exe'
+      CommandLine: 'cmd.exe /c app.exe -enc payload'

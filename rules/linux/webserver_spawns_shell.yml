@@ -1,0 +1,43 @@
+title: Web Server Process Spawns a Shell
+id: 6b1e0a54-2c9e-4b7a-9a1f-0f2b1c4d5e05
+status: experimental
+description: >
+  Detects a web or mail server process spawning an interactive shell. A web
+  server has no legitimate reason to execute /bin/sh; when it does, the request
+  that caused it generally carried the command. This is the observable end of
+  the unauthenticated command-injection bugs that dominate KEV — Zimbra
+  CVE-2026-73570 lands exactly here.
+references:
+  - https://attack.mitre.org/techniques/T1505/003/
+author: Benjamin Choe
+date: 2026-08-25
+logsource:
+  product: linux
+  category: process_creation
+detection:
+  selection:
+    ParentImage|endswith:
+      - '/httpd'
+      - '/apache2'
+      - '/nginx'
+      - '/php-fpm'
+      - '/java'
+      - '/zmmailboxdctl'
+    Image|endswith:
+      - '/sh'
+      - '/bash'
+      - '/dash'
+      - '/zsh'
+  filter_healthcheck:
+    CommandLine|contains:
+      - 'healthcheck'
+      - 'logrotate'
+  condition: selection and not filter_healthcheck
+falsepositives:
+  - CGI applications that legitimately shell out
+  - Container entrypoints that wrap the server in a shell
+level: critical
+tags:
+  - attack.persistence
+  - attack.initial_access
+  - attack.t1505.003

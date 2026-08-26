@@ -1,0 +1,43 @@
+title: ClickFix Paste-and-Run via Windows Run Dialog
+id: 6b1e0a54-2c9e-4b7a-9a1f-0f2b1c4d5e03
+status: experimental
+description: >
+  Detects a scripting interpreter launched directly by explorer.exe with a
+  download-and-execute command line. This is the ClickFix pattern: a web page
+  tells the visitor to paste a prepared command into the Run dialog, so the
+  parent process is the shell itself rather than a browser or Office.
+  SmartApeSG, ClearFake and FAKEUPDATES all deliver this way.
+references:
+  - https://attack.mitre.org/techniques/T1204/004/
+author: Benjamin Choe
+date: 2026-08-25
+logsource:
+  product: windows
+  category: process_creation
+detection:
+  selection_parent:
+    EventID: 4688
+    ParentImage|endswith: '\explorer.exe'
+    Image|endswith:
+      - '\powershell.exe'
+      - '\pwsh.exe'
+      - '\mshta.exe'
+      - '\cmd.exe'
+      - '\curl.exe'
+  selection_fetch:
+    CommandLine|contains:
+      - 'http://'
+      - 'https://'
+      - 'iwr '
+      - 'invoke-webrequest'
+      - 'downloadstring'
+      - 'bitsadmin'
+  condition: selection_parent and selection_fetch
+falsepositives:
+  - An administrator pasting a documented install one-liner into the Run dialog
+  - Vendor documentation that instructs users to run a curl command
+level: high
+tags:
+  - attack.execution
+  - attack.initial_access
+  - attack.t1204.004

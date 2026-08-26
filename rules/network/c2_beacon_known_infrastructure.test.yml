@@ -1,0 +1,28 @@
+true_positives:
+  - name: beacon to a Cobalt Strike listener
+    event:
+      DestinationIp: '38.147.185.54'
+      DestinationPort: 443
+      Image: 'C:\Windows\System32\rundll32.exe'
+  - name: beacon to an AsyncRAT listener on a high port
+    event:
+      DestinationIp: '80.190.77.86'
+      DestinationPort: 30700
+      Image: 'C:\Users\bob\AppData\Roaming\svc.exe'
+
+true_negatives:
+  - name: ordinary outbound traffic
+    event:
+      DestinationIp: '140.82.121.4'
+      DestinationPort: 443
+      Image: 'C:\Program Files\Git\bin\git.exe'
+  - name: an internal address that merely starts with the same octets
+    event:
+      DestinationIp: '10.38.147.185'
+      DestinationPort: 445
+      Image: 'C:\Windows\System32\svchost.exe'
+  - name: near-miss address one octet different from an indicator
+    event:
+      DestinationIp: '38.147.185.55'
+      DestinationPort: 443
+      Image: 'C:\Windows\System32\svchost.exe'

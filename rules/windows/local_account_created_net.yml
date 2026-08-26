@@ -1,0 +1,31 @@
+title: Local Account Created via net.exe
+id: 6b1e0a54-2c9e-4b7a-9a1f-0f2b1c4d5e01
+status: experimental
+description: >
+  Detects local account creation using net.exe or net1.exe. Attackers add an
+  account after gaining execution so they retain access that survives the
+  original foothold being cleaned up.
+references:
+  - https://attack.mitre.org/techniques/T1136/001/
+author: Benjamin Choe
+date: 2026-08-25
+logsource:
+  product: windows
+  category: process_creation
+detection:
+  selection:
+    EventID: 4688
+    Image|endswith:
+      - '\net.exe'
+      - '\net1.exe'
+    CommandLine|contains|all:
+      - ' user '
+      - ' /add'
+  condition: selection
+falsepositives:
+  - Helpdesk provisioning a local account on a workstation
+  - Imaging or build automation that seeds a local administrator
+level: medium
+tags:
+  - attack.persistence
+  - attack.t1136.001

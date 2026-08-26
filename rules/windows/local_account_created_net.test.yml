@@ -1,0 +1,48 @@
+true_positives:
+  - name: backdoor account added with net.exe
+    event:
+      EventID: 4688
+      Image: 'C:\Windows\System32\net.exe'
+      CommandLine: 'net user svc_backup P@ssw0rd123 /add'
+  - name: net1.exe variant used to evade a name-only rule
+    event:
+      EventID: 4688
+      Image: 'C:\Windows\System32\net1.exe'
+      CommandLine: 'net1 user attacker Passw0rd! /add'
+  - name: mixed case and full path
+    event:
+      EventID: 4688
+      Image: 'C:\Windows\SysWOW64\NET.EXE'
+      CommandLine: 'NET USER helper Winter2026 /ADD'
+
+true_negatives:
+  - name: enumerating accounts, not creating one
+    event:
+      EventID: 4688
+      Image: 'C:\Windows\System32\net.exe'
+      CommandLine: 'net user'
+  - name: querying one account - contains ' user ' but no /add
+    event:
+      EventID: 4688
+      Image: 'C:\Windows\System32\net.exe'
+      CommandLine: 'net user alice /domain'
+  - name: adding a group, not a user
+    event:
+      EventID: 4688
+      Image: 'C:\Windows\System32\net.exe'
+      CommandLine: 'net localgroup Developers /add'
+  - name: net use drive mapping mentions neither user nor add
+    event:
+      EventID: 4688
+      Image: 'C:\Windows\System32\net.exe'
+      CommandLine: 'net use Z: \\fileserver\share'
+  - name: unrelated binary with a similar command line
+    event:
+      EventID: 4688
+      Image: 'C:\Tools\inventory.exe'
+      CommandLine: 'inventory.exe --report user /add'
+  - name: process creation event from a different channel
+    event:
+      EventID: 4624
+      Image: 'C:\Windows\System32\net.exe'
+      CommandLine: 'net user svc /add'
