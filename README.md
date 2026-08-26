@@ -49,12 +49,59 @@ to act on them:
 | **missed detection** | a `true_positives` case did not fire | the rule was silent during the thing it exists to catch |
 | **false positive** | a `true_negatives` case fired | this is how a rule gets muted in production, after which it protects nothing |
 
+## Coverage against reality, not against your own claims
+
+`coverage` lets a rule set grade its own homework. It reports the techniques your rules
+**claim** against the ones they **prove** — useful, but a library can score 100% on that and
+still detect nothing anyone is actually being attacked with, because it chose what to claim in
+the first place.
+
+`gap` asks the question from outside. Point it at any source of ATT&CK identifiers observed in
+real data — threat-intel notes, a SIEM export, a text file — and it reports what fraction of
+what you are *actually seeing* you would catch.
+
+```console
+$ ruleproof gap rules ../threat-intel-pipeline/vault/threats
+Observed techniques      : 43
+Demonstrated by rules    : 6
+Observed AND detected    : 11  (26%)
+Observed, NOT detected   : 32
+
+GAP - most-observed techniques with no demonstrated detection
+  T1190          24 source(s)
+  T1571           9 source(s)
+  T1219           7 source(s)
+  ...
+
+2 of 6 demonstrated technique(s) were never observed in this data: T1053.005, T1136.001
+  Not wrong on its own, but if it is most of the rule set the rules were chosen from
+  general knowledge rather than from the evidence in hand.
+```
+
+Two things that output is designed to make unavoidable:
+
+- **The gap is ranked by how often each technique was actually seen**, so it names the next rule
+  to write instead of leaving you with a percentage. Above, `T1190` is both the most-observed
+  technique in the data and completely undetected.
+- **Rules aimed at things you have never seen are reported separately.** Defending against
+  something that has not hit you yet is legitimate; discovering that it describes most of your
+  rule set means the rules came from general knowledge rather than from evidence you already
+  had. That is what the author found on the first real run of this command.
+
+`--fail-under PCT` exits 1 below a threshold, so CI can stop coverage regressing the same way
+`test` stops rules rotting. `--limit N` controls how much of the gap is listed.
+
+The dependency runs one way on purpose: this reads *a file or directory containing ATT&CK
+identifiers*, with no schema and no import. It knows nothing about where the data came from,
+and so has nothing to keep up with.
+
 ## Quickstart
 
 ```bash
 pip install pyyaml
 python -m ruleproof.cli test rules        # exit 1 on failures or untested rules
 python -m ruleproof.cli coverage rules    # ATT&CK claimed vs. demonstrated
+python -m ruleproof.cli gap rules NOTES   # ...vs. what is actually being seen
 ```
 
 A rule and its tests sit side by side:
@@ -212,6 +259,13 @@ file handle in `Rule.from_file` was found.
   `process.command_line` and `CommandLine`.
 - `true_negatives` prove a rule does not fire on the benign cases *you thought of*. That is
   strictly better than nothing and strictly worse than production telemetry.
+- `gap` counts a technique as covered when the rule set demonstrates it **or something in its
+  family** — a proven sub-technique covers its parent and vice versa. That is a deliberate
+  choice: being strict about the dot overstates the gap, and a number that overstates the
+  problem gets ignored exactly as fast as one that flatters. It does mean a rule for one
+  sub-technique reads as covering a sibling it may not really catch.
+- `gap` measures against whatever you point it at. Coverage of a narrow data set is not
+  coverage of your environment, and the command cannot tell the difference.
 
 ## License
 

@@ -1,4 +1,4 @@
-"""`ruleproof test` and `ruleproof coverage`.
+"""`ruleproof test`, `ruleproof coverage` and `ruleproof gap`.
 
 Exit codes are the product. This is meant to run in CI, so the important
 question is not what it prints but when it returns non-zero:
@@ -17,6 +17,7 @@ import sys
 from pathlib import Path
 
 from .harness import discover, run_all
+from .observed import ObservedError, coverage_gap, load_observed, unobserved
 
 
 def _utf8_stdout():
@@ -97,6 +98,69 @@ def _cmd_coverage(args):
     return 0
 
 
+def _cmd_gap(args):
+    """Coverage against observed reality rather than against the rules' own claims.
+
+    `coverage` lets a rule set grade its own homework: it reports the techniques
+    the rules claim versus the ones they prove. This asks the question from
+    outside — of the techniques actually seen in threat data, how many would we
+    catch — and the two answers disagree.
+    """
+    directory, error = _check_dir(args.rules_dir)
+    if error:
+        print(error, file=sys.stderr)
+        return 2
+
+    try:
+        observed = load_observed(args.observed)
+    except ObservedError as e:
+        print(str(e), file=sys.stderr)
+        return 2
+
+    demonstrated = run_all(directory).covered_techniques
+    covered, gap = coverage_gap(observed, demonstrated)
+    total = len(observed)
+    pct = (len(covered) / total * 100) if total else 0.0
+
+    print(f"Observed techniques      : {total}")
+    print(f"Demonstrated by rules    : {len(demonstrated)}")
+    print(f"Observed AND detected    : {len(covered)}  ({pct:.0f}%)")
+    print(f"Observed, NOT detected   : {len(gap)}\n")
+
+    if covered:
+        print("COVERED - seen in the data and provably detected")
+        for t in covered:
+            print(f"  {t:<12} {observed[t]:>4} source(s)")
+        print()
+
+    if gap:
+        print("GAP - most-observed techniques with no demonstrated detection")
+        for t in gap[: args.limit]:
+            print(f"  {t:<12} {observed[t]:>4} source(s)")
+        if len(gap) > args.limit:
+            print(f"  ... and {len(gap) - args.limit} more (--limit to show)")
+        print()
+
+    stranded = unobserved(observed, demonstrated)
+    if stranded:
+        print(
+            f"{len(stranded)} of {len(demonstrated)} demonstrated technique(s) were "
+            "never observed in this data: " + ", ".join(stranded)
+        )
+        print(
+            "  Not wrong on its own, but if it is most of the rule set the rules were "
+            "chosen from general knowledge rather than from the evidence in hand."
+        )
+
+    if args.fail_under is not None and pct < args.fail_under:
+        print(
+            f"\nFAIL: {pct:.0f}% of observed techniques are detected, "
+            f"below the required {args.fail_under:.0f}%"
+        )
+        return 1
+    return 0
+
+
 def build_parser():
     parser = argparse.ArgumentParser(
         prog="ruleproof", description="Unit tests for Sigma detection rules."
@@ -115,6 +179,26 @@ def build_parser():
     p_cov = sub.add_parser("coverage", help="ATT&CK techniques claimed vs. demonstrated")
     p_cov.add_argument("rules_dir")
     p_cov.set_defaults(func=_cmd_coverage)
+
+    p_gap = sub.add_parser(
+        "gap",
+        help="coverage against techniques actually observed in threat data",
+    )
+    p_gap.add_argument("rules_dir")
+    p_gap.add_argument(
+        "observed",
+        help="file or directory containing ATT&CK identifiers seen in real data "
+             "(threat-intel notes, a SIEM export, or a plain list)",
+    )
+    p_gap.add_argument(
+        "--fail-under", type=float, default=None, metavar="PCT",
+        help="exit 1 when fewer than PCT%% of observed techniques are detected",
+    )
+    p_gap.add_argument(
+        "--limit", type=int, default=15, metavar="N",
+        help="how many gap techniques to list (default 15)",
+    )
+    p_gap.set_defaults(func=_cmd_gap)
     return parser
 
 
