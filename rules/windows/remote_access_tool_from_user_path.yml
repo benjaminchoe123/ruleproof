@@ -1,0 +1,60 @@
+title: Remote Access Tool Running from a User-Writable Path
+id: 3d7a1f92-5c68-4b03-9e14-8a2c6f0b5d31
+status: experimental
+description: >
+  Detects legitimate remote-access and RMM software executing from a directory a
+  user can write to. These tools are not malware and must not be detected as
+  such — the signal is *where the binary runs from*, not what it is. A vendor
+  install lives under Program Files; a NetSupport client32.exe running out of
+  AppData was staged by whoever is now on the keyboard.
+
+  This is the shape of the technique that keeps working after indicators die.
+  Attackers favour signed, legitimate remote-access software precisely because it
+  is allowlisted and looks like IT activity, so an indicator-based rule ages out
+  while a path-based one does not.
+
+  Written because `ruleproof gap` reported T1219 as the most-observed technique
+  in the threat-intel pipeline's data with no detection (7 sources), after T1571
+  was covered.
+
+  The tool list deliberately contains **only binaries this rule has test cases
+  for**. Extending it is expected — but each addition should arrive with a true
+  positive and a near-miss negative, or the rule grows surface that nothing
+  checks, which is the failure this whole project exists to prevent.
+references:
+  - https://attack.mitre.org/techniques/T1219/
+author: Benjamin Choe
+date: 2026-08-26
+logsource:
+  product: windows
+  category: process_creation
+detection:
+  selection:
+    EventID: 4688
+    Image|endswith:
+      - '\client32.exe'                    # NetSupport Manager
+      - '\AnyDesk.exe'
+      - '\TeamViewer.exe'
+      - '\ScreenConnect.ClientService.exe'
+      - '\AteraAgent.exe'
+  user_writable_path:
+    Image|contains:
+      - '\AppData\'
+      - '\Temp\'
+      - '\Downloads\'
+      - '\Users\Public\'
+      - '\ProgramData\'
+  condition: selection and user_writable_path
+falsepositives:
+  - >
+    An organisation that legitimately deploys one of these tools. Atera in
+    particular installs to ProgramData by design, so a shop running Atera must
+    allowlist its own agent path or this fires on every endpoint. That tuning
+    step is the rule working correctly, not a defect — the alternative is not
+    detecting the same tool when an intruder brings it.
+  - Portable builds run deliberately from a USB drive or Downloads by IT staff
+  - Software updaters that stage a signed helper in ProgramData before moving it
+level: high
+tags:
+  - attack.command_and_control
+  - attack.t1219

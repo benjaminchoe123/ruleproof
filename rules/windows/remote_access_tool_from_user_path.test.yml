@@ -1,0 +1,75 @@
+true_positives:
+  - name: NetSupport client32.exe staged in AppData (the classic RAT-ified install)
+    event:
+      EventID: 4688
+      Image: 'C:\Users\bob\AppData\Roaming\netsupport\client32.exe'
+      ParentImage: 'C:\Windows\System32\cmd.exe'
+  - name: AnyDesk run out of Temp
+    event:
+      EventID: 4688
+      Image: 'C:\Users\bob\AppData\Local\Temp\AnyDesk.exe'
+      ParentImage: 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe'
+  - name: ScreenConnect client dropped into Downloads
+    event:
+      EventID: 4688
+      Image: 'C:\Users\bob\Downloads\ScreenConnect.ClientService.exe'
+      ParentImage: 'C:\Program Files\Mozilla Firefox\firefox.exe'
+  - name: TeamViewer staged in the public profile
+    event:
+      EventID: 4688
+      Image: 'C:\Users\Public\TeamViewer.exe'
+      ParentImage: 'C:\Windows\System32\cmd.exe'
+  - name: AteraAgent installed from ProgramData
+    event:
+      EventID: 4688
+      Image: 'C:\ProgramData\AteraAgent\AteraAgent.exe'
+      ParentImage: 'C:\Windows\System32\msiexec.exe'
+
+true_negatives:
+  # The entire point: these tools are legitimate software. Where they run from is
+  # the signal, not what they are. A rule that flags the vendor install is a rule
+  # that gets switched off in a week.
+  - name: AnyDesk from its real install location
+    event:
+      EventID: 4688
+      Image: 'C:\Program Files (x86)\AnyDesk\AnyDesk.exe'
+      ParentImage: 'C:\Windows\explorer.exe'
+  - name: NetSupport from its real install location
+    event:
+      EventID: 4688
+      Image: 'C:\Program Files\NetSupport\NetSupport Manager\client32.exe'
+      ParentImage: 'C:\Windows\System32\services.exe'
+  - name: TeamViewer from its real install location
+    event:
+      EventID: 4688
+      Image: 'C:\Program Files\TeamViewer\TeamViewer.exe'
+      ParentImage: 'C:\Windows\explorer.exe'
+  - name: an unrelated binary running from AppData
+    event:
+      EventID: 4688
+      Image: 'C:\Users\bob\AppData\Local\Slack\slack.exe'
+      ParentImage: 'C:\Windows\explorer.exe'
+  - name: a filename that merely contains a tool name as a substring
+    event:
+      EventID: 4688
+      Image: 'C:\Users\bob\AppData\Local\Temp\anydesk-support-notes.exe'
+      ParentImage: 'C:\Windows\explorer.exe'
+  - name: a partial download whose name extends past the tool binary
+    # Guards `endswith` against being loosened to `contains`: this path does
+    # contain '\client32.exe', so a contains-match fires on a file that is not
+    # the executable. The mutation check found this hole -- the case above does
+    # not contain the tool name at all, so it never tested the distinction.
+    event:
+      EventID: 4688
+      Image: 'C:\Users\bob\AppData\Local\Temp\client32.exe.tmp'
+      ParentImage: 'C:\Windows\explorer.exe'
+  - name: a quarantined copy kept beside its original name
+    event:
+      EventID: 4688
+      Image: 'C:\ProgramData\Antivirus\Quarantine\AnyDesk.exe.bak'
+      ParentImage: 'C:\Windows\System32\services.exe'
+  - name: a non-process-creation event for a matching path
+    event:
+      EventID: 4624
+      Image: 'C:\Users\bob\AppData\Local\Temp\AnyDesk.exe'
+      ParentImage: 'C:\Windows\System32\lsass.exe'

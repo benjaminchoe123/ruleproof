@@ -65,6 +65,24 @@ MUTATIONS = [
         "  condition: selection",
     ),
     (
+        "windows/remote_access_tool_from_user_path.yml",
+        "drop the user-writable path constraint (flags every legitimate install)",
+        "  condition: selection and user_writable_path",
+        "  condition: selection",
+    ),
+    (
+        "windows/remote_access_tool_from_user_path.yml",
+        "match tool names loosely instead of as a full filename",
+        "    Image|endswith:",
+        "    Image|contains:",
+    ),
+    (
+        "windows/remote_access_tool_from_user_path.yml",
+        "forget the process-creation constraint (matches any event type)",
+        "    EventID: 4688\n",
+        "",
+    ),
+    (
         "windows/clickfix_run_dialog_execution.yml",
         "drop the explorer.exe parent constraint",
         "    ParentImage|endswith: '\\explorer.exe'\n",

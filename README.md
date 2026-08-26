@@ -8,7 +8,7 @@ thing it was written for, and stays quiet on the things it wasn't.
 
 ```console
 $ ruleproof test rules
-7 rule(s) tested, 54 case(s), 0 failure(s), 0 untested, 0 orphaned, 0 error(s)
+8 rule(s) tested, 67 case(s), 0 failure(s), 0 untested, 0 orphaned, 0 error(s)
 $ echo $?
 0
 ```
@@ -74,19 +74,19 @@ A snapshot of real observed activity ships with the repo, so this runs with noth
 cloned:
 
 ```console
-$ ruleproof gap rules samples/observed-techniques.txt
+$ ruleproof gap rules samples/observed-techniques.txt --limit 3
 Observed techniques      : 43
-Demonstrated by rules    : 6
-Observed AND detected    : 11  (26%)
-Observed, NOT detected   : 32
+Demonstrated by rules    : 8
+Observed AND detected    : 13  (30%)
+Observed, NOT detected   : 30
 
 GAP - most-observed techniques with no demonstrated detection
   T1190          24 source(s)
-  T1571           9 source(s)
-  T1219           7 source(s)
-  ...
+  T1189           5 source(s)
+  T1056.001       4 source(s)
+  ... and 27 more (--limit to show)
 
-2 of 6 demonstrated technique(s) were never observed in this data: T1053.005, T1136.001
+2 of 8 demonstrated technique(s) were never observed in this data: T1053.005, T1136.001
   Not wrong on its own, but if it is most of the rule set the rules were chosen from
   general knowledge rather than from the evidence in hand.
 ```
@@ -176,6 +176,20 @@ This found two genuine holes the first time it ran, both in rules that were pass
 
 Mutation checking runs in CI.
 
+### The mutation check earned its keep
+
+While writing the T1219 rule, one mutation **survived**: loosening the tool-name match from
+`endswith` to `contains` failed no test at all. The near-miss negative meant to guard that —
+`anydesk-support-notes.exe` — never contained the string `\AnyDesk.exe` in the first place, so
+it had never tested the distinction. It only looked like it did.
+
+The fix was a case that does contain it: `client32.exe.tmp`, a partial download whose name runs
+past the executable. `contains` fires on it; `endswith` does not.
+
+That is the argument for mutation testing in three lines. The suite was green, the rule was
+correct, and one of its constraints was guarded by a test that asserted nothing. Nothing else in
+the toolchain would have said so.
+
 ## How it works
 
 ```mermaid
@@ -234,7 +248,7 @@ Sigma into SIEM queries — use [pySigma](https://github.com/SigmaHQ/pySigma) fo
 
 ## The rules in this repo
 
-Seven rules across Windows, Linux, and network telemetry, each with true positives and
+Eight rules across Windows, Linux, and network telemetry, each with true positives and
 near-miss negatives:
 
 | rule | ATT&CK | why this one |
@@ -246,6 +260,7 @@ near-miss negatives:
 | Web server process spawns a shell | T1505.003 | |
 | Outbound connection to known C2 infrastructure | T1071.001 | |
 | Commodity RAT C2 on a non-standard port | T1571 | **chosen by `gap`** |
+| Remote access tool from a user-writable path | T1219 | **chosen by `gap`** |
 
 They are drawn from activity in the [threat-intel-pipeline][pipeline] weekly reports —
 the ClickFix rule covers the SmartApeSG/ClearFake/FAKEUPDATES delivery chain, the web-shell
@@ -258,7 +273,9 @@ exploited; ruleproof says whether I would catch it.**
 
 The last rule in that table was not chosen by intuition. `ruleproof gap` reported T1571 as the
 second most-observed technique in the pipeline's data — 9 sources — with no detection at all,
-so it was the obvious next one to write. Adding it moved observed coverage from **26% to 28%**.
+so it was the obvious next one to write. Adding it moved observed coverage from **26% to 28%**,
+and doing the same for the next-ranked technique — T1219, Remote Access Tools — took it to
+**30%**. Both rules were picked by the measurement, not by taste.
 
 Writing it also produced the most useful decision in the rule set. The same week's data carried
 C2 on ports **8080** and **4307**, and both are deliberately excluded: 8080 is ordinary
