@@ -70,8 +70,11 @@ the first place.
 real data — threat-intel notes, a SIEM export, a text file — and it reports what fraction of
 what you are *actually seeing* you would catch.
 
+A snapshot of real observed activity ships with the repo, so this runs with nothing else
+cloned:
+
 ```console
-$ ruleproof gap rules ../threat-intel-pipeline/vault/threats
+$ ruleproof gap rules samples/observed-techniques.txt
 Observed techniques      : 43
 Demonstrated by rules    : 6
 Observed AND detected    : 11  (26%)
@@ -99,7 +102,14 @@ Two things that output is designed to make unavoidable:
   had. That is what the author found on the first real run of this command.
 
 `--fail-under PCT` exits 1 below a threshold, so CI can stop coverage regressing the same way
-`test` stops rules rotting. `--limit N` controls how much of the gap is listed.
+`test` stops rules rotting — **this repo's own CI gates on it**, which is the difference between
+a number in a README and a number that stays true. `--limit N` controls how much of the gap is
+listed.
+
+`samples/observed-techniques.txt` is a snapshot of what the [threat-intel-pipeline][pipeline]
+observed: 43 techniques across 126 sightings, one line per sighting, since the repetition is
+what ranks the gap. They are public ATT&CK identifiers and nothing else — no indicators, no
+customer data. Point the command at your own data and it reports your coverage instead.
 
 The dependency runs one way on purpose: this reads *a file or directory containing ATT&CK
 identifiers*, with no schema and no import. It knows nothing about where the data came from,
@@ -111,7 +121,7 @@ and so has nothing to keep up with.
 pip install pyyaml
 python -m ruleproof.cli test rules        # exit 1 on failures or untested rules
 python -m ruleproof.cli coverage rules    # ATT&CK claimed vs. demonstrated
-python -m ruleproof.cli gap rules NOTES   # ...vs. what is actually being seen
+python -m ruleproof.cli gap rules samples/observed-techniques.txt   # ...vs. what is being seen
 ```
 
 A rule and its tests sit side by side:

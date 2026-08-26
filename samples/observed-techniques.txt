@@ -1,0 +1,138 @@
+# ATT&CK techniques observed in live threat data.
+#
+# Captured 2026-08-26 from the threat-intel-pipeline's vault: 43 techniques across
+# threat notes built from CISA KEV, abuse.ch ThreatFox/URLhaus/MalwareBazaar and
+# malware-traffic-analysis.net. One line per sighting, so a technique seen in five
+# separate notes appears five times -- that repetition is what ranks the gap.
+#
+# These are public ATT&CK identifiers, nothing more. No indicators, no customer data.
+# Regenerate against your own data and `ruleproof gap` reports your coverage instead.
+#
+#   ruleproof gap rules samples/observed-techniques.txt
+
+T1190  # x24  Exploit Public-Facing Application
+T1190
+T1190
+T1190
+T1190
+T1190
+T1190
+T1190
+T1190
+T1190
+T1190
+T1190
+T1190
+T1190
+T1190
+T1190
+T1190
+T1190
+T1190
+T1190
+T1190
+T1190
+T1190
+T1190
+T1071.001  # x13  Web Protocols
+T1071.001
+T1071.001
+T1071.001
+T1071.001
+T1071.001
+T1071.001
+T1071.001
+T1071.001
+T1071.001
+T1071.001
+T1071.001
+T1071.001
+T1071  # x10  Application Layer Protocol
+T1071
+T1071
+T1071
+T1071
+T1071
+T1071
+T1071
+T1071
+T1071
+T1571  # x9  Non-Standard Port
+T1571
+T1571
+T1571
+T1571
+T1571
+T1571
+T1571
+T1571
+T1219  # x7  Remote Access Tools
+T1219
+T1219
+T1219
+T1219
+T1219
+T1219
+T1059  # x6  Command and Scripting Interpreter
+T1059
+T1059
+T1059
+T1059
+T1059
+T1189  # x5  Drive-by Compromise
+T1189
+T1189
+T1189
+T1189
+T1056.001  # x4  Keylogging
+T1056.001
+T1056.001
+T1056.001
+T1068  # x3  Exploitation for Privilege Escalation
+T1068
+T1068
+T1204.002  # x3  Malicious File
+T1204.002
+T1204.002
+T1204.004  # x3  Malicious Copy and Paste
+T1204.004
+T1204.004
+T1498  # x3  Network Denial of Service
+T1498
+T1498
+T1105  # x2  Ingress Tool Transfer
+T1105
+T1555  # x2  Credentials from Password Stores
+T1555
+T1555.003  # x2  Credentials from Web Browsers
+T1555.003
+T1557  # x2  Adversary-in-the-Middle
+T1557
+T1595  # x2  Active Scanning
+T1595
+T1021.005  # x1  VNC
+T1027  # x1  Obfuscated Files or Information
+T1036.008  # x1  Masquerade File Type
+T1055  # x1  Process Injection
+T1059.007  # x1  JavaScript
+T1071.002  # x1  File Transfer Protocols
+T1071.003  # x1  Mail Protocols
+T1078.001  # x1  Default Accounts
+T1102  # x1  Web Service
+T1115  # x1  Clipboard Data
+T1204  # x1  User Execution
+T1204.001  # x1  Malicious Link
+T1218.005  # x1  Mshta
+T1496  # x1  Resource Hijacking
+T1505.003  # x1  Web Shell
+T1539  # x1  Steal Web Session Cookie
+T1546  # x1  Event Triggered Execution
+T1550.001  # x1  Application Access Token
+T1552.005  # x1  Cloud Instance Metadata API
+T1566  # x1  Phishing
+T1566.001  # x1  Spearphishing Attachment
+T1566.002  # x1  Spearphishing Link
+T1573.002  # x1  Asymmetric Cryptography
+T1583.001  # x1  Domains
+T1583.003  # x1  Virtual Private Server
+T1584.001  # x1  Domains
