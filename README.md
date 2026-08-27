@@ -287,8 +287,12 @@ then T1219 (Remote Access Tools), T1105 (Ingress Tool Transfer) and T1189 (Drive
 took it to **35%**. All four rules were picked by the measurement rather than by taste.
 
 One technique on that list is deliberately **not** attempted: **T1190, Exploit Public-Facing
-Application** — the most-observed technique in the data by a factor of three, and completely
-undetected. It cannot be caught by one generic rule, because exploiting a public-facing
+Application** — the most-observed technique in the data at 25 sightings, and completely
+undetected. (This previously read "the most-observed technique by a factor of three", which was
+never true of the data as a whole: T1071.001 sits at 13. The factor described the lead over the
+next-largest *undetected* technique, and that lead is now above six, because the rules written
+since have cleared everything between. Overstating a headline gap in a project about honest
+coverage numbers is worth correcting even where the error argues in the project's favour.) It cannot be caught by one generic rule, because exploiting a public-facing
 application looks different for every product, and writing something that pattern-matches
 invented exploit strings would be worse than leaving the gap visible. T1190 is where generic
 detection stops and product-specific detection has to start. Saying so is more useful than a
