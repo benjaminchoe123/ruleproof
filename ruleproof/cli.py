@@ -165,8 +165,12 @@ def _cmd_gap(args):
         )
 
     if args.fail_under is not None and pct < args.fail_under:
+        # One decimal here, not the headline's rounded figure. The comparison uses
+        # the real value, so 32.5% against a floor of 33 printed "33% ... below
+        # the required 33%" -- a message that reads as a bug in the tool, and
+        # gets the gate ignored instead of the coverage fixed.
         print(
-            f"\nFAIL: {pct:.0f}% of observed techniques are detected, "
+            f"\nFAIL: {pct:.1f}% of observed techniques are detected, "
             f"below the required {args.fail_under:.0f}%"
         )
         return 1

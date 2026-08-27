@@ -91,3 +91,19 @@ def test_allow_untested_does_not_also_tolerate_orphans(tmp_path):
         (rules / "net_user_add.test.yml").read_text(encoding="utf-8"), encoding="utf-8"
     )
     assert main(["test", str(rules), "--allow-untested"]) == 1
+
+
+def test_fail_under_message_never_reads_as_equal_to_the_threshold(tmp_path, capsys):
+    """The headline percentage is rounded; the gate compares the real value. At
+    32.5% against a floor of 33 that printed "FAIL: 33% ... below the required
+    33%", which reads as a bug in the tool and gets the gate ignored rather than
+    the coverage fixed."""
+    rules = build(tmp_path)          # one rule, demonstrating T1136.001
+    observed = tmp_path / "observed.txt"
+    #: 1 of 3 detected = 33.3%, which rounds to 33 and must still fail a 34 floor.
+    observed.write_text("T1136.001\nT1190\nT1071\n", encoding="utf-8")
+
+    assert main(["gap", str(rules), str(observed), "--fail-under", "34"]) == 1
+    fail_line = [ln for ln in capsys.readouterr().out.splitlines() if "FAIL" in ln][0]
+    assert "34%" in fail_line
+    assert "33.3%" in fail_line

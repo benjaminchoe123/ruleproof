@@ -124,6 +124,30 @@ MUTATIONS = [
         "    DestinationIp:\n      - '38.147.185.54'",
         "    DestinationIp|startswith:\n      - '38.147.185.5'",
     ),
+    (
+        "windows/script_host_runs_browser_download.yml",
+        "drop the download-location constraint (fires on every logon script)",
+        "  condition: selection_host and selection_downloaded and not filter_mail_attachment",
+        "  condition: selection_host and not filter_mail_attachment",
+    ),
+    (
+        "windows/script_host_runs_browser_download.yml",
+        "look for the script host anywhere in the event, not as the executing image",
+        "    Image|endswith:\n      - '\\wscript.exe'\n      - '\\cscript.exe'\n      - '\\mshta.exe'",
+        "    CommandLine|contains:\n      - 'wscript'\n      - 'cscript'\n      - 'mshta'",
+    ),
+    (
+        "windows/script_host_runs_browser_download.yml",
+        "stop excluding the Outlook attachment cache (claims T1189 for mail delivery)",
+        "    CommandLine|contains: '\\Content.Outlook\\'",
+        "    CommandLine|contains: '\\NeverAppearsInAnyPath\\'",
+    ),
+    (
+        "windows/script_host_runs_browser_download.yml",
+        "forget the process-creation constraint (matches any event type)",
+        "    EventID: 4688\n",
+        "",
+    ),
 ]
 
 

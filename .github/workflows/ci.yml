@@ -42,7 +42,7 @@ jobs:
         # activity regresses. The sample is a snapshot of what the threat-intel
         # pipeline saw, so the threshold is deliberately just under the current
         # figure -- it catches a rule being deleted or narrowed into uselessness.
-        run: python -m ruleproof.cli gap rules samples/observed-techniques.txt --fail-under 25
+        run: python -m ruleproof.cli gap rules samples/observed-techniques.txt --fail-under 33
       - name: test suites actually discriminate (mutation check)
         run: python scripts/mutation_check.py
 

@@ -1,0 +1,77 @@
+true_positives:
+  - name: wscript running the SocGholish-style .js dropped by a fake update
+    event:
+      EventID: 4688
+      Image: 'C:\Windows\System32\wscript.exe'
+      CommandLine: 'wscript.exe "C:\Users\bob\Downloads\Chrome_Update_8842.js"'
+  - name: cscript on a .vbs from the Downloads folder
+    event:
+      EventID: 4688
+      Image: 'C:\Windows\System32\cscript.exe'
+      CommandLine: 'cscript.exe //nologo C:\Users\bob\Downloads\invoice_2026.vbs'
+  - name: mshta on an .hta pulled down by the browser
+    event:
+      EventID: 4688
+      Image: 'C:\Windows\System32\mshta.exe'
+      CommandLine: 'mshta.exe C:\Users\alice\Downloads\update.hta'
+  - name: the 32-bit script host, same file, same folder
+    event:
+      EventID: 4688
+      Image: 'C:\Windows\SysWOW64\wscript.exe'
+      CommandLine: 'wscript C:\Users\bob\Downloads\Firefox_Update.js'
+  - name: staged under the Edge download path rather than the profile Downloads folder
+    event:
+      EventID: 4688
+      Image: 'C:\Windows\System32\wscript.exe'
+      CommandLine: 'wscript.exe "C:\Users\bob\AppData\Local\Microsoft\Edge\User Data\Default\Downloads\setup.js"'
+  - name: run straight out of the browser cache without ever landing in Downloads
+    event:
+      EventID: 4688
+      Image: 'C:\Windows\System32\mshta.exe'
+      CommandLine: 'mshta.exe C:\Users\bob\AppData\Local\Microsoft\Windows\INetCache\IE\9KQ2M1LZ\update[1].hta'
+
+true_negatives:
+  # Every constraint in the rule is guarded by a case that only that constraint
+  # rejects. Without that, a constraint can be loosened without failing anything
+  # and the suite still reports green -- which is how a mutation survived on
+  # 2026-08-26.
+  - name: node running a .js from Downloads -- a developer, not a victim
+    event:
+      EventID: 4688
+      Image: 'C:\Program Files\nodejs\node.exe'
+      CommandLine: 'node C:\Users\bob\Downloads\build-script.js'
+  - name: an analyst opening a downloaded script in an editor to read it
+    event:
+      EventID: 4688
+      Image: 'C:\Program Files\Notepad++\notepad++.exe'
+      CommandLine: 'notepad++.exe C:\Users\bob\Downloads\wscript-wrapper.vbs'
+  - name: wscript running a signed logon script from the domain share
+    event:
+      EventID: 4688
+      Image: 'C:\Windows\System32\wscript.exe'
+      CommandLine: 'wscript.exe \corp.example\NETLOGON\mapdrives.vbs'
+  - name: cscript on an admin script under Program Files
+    event:
+      EventID: 4688
+      Image: 'C:\Windows\System32\cscript.exe'
+      CommandLine: 'cscript.exe "C:\Program Files\CorpApp\maintenance.vbs" /quiet'
+  - name: an installer downloaded and run from Downloads, not a script
+    event:
+      EventID: 4688
+      Image: 'C:\Users\bob\Downloads\CorpVPN-Setup.exe'
+      CommandLine: '"C:\Users\bob\Downloads\CorpVPN-Setup.exe" /S'
+  - name: wscript on a script that merely lives elsewhere in the profile
+    event:
+      EventID: 4688
+      Image: 'C:\Windows\System32\wscript.exe'
+      CommandLine: 'wscript.exe C:\Users\bob\Documents\reports\monthly.vbs'
+  - name: a script run from the Outlook attachment cache -- mail delivery, not drive-by
+    event:
+      EventID: 4688
+      Image: 'C:\Windows\System32\wscript.exe'
+      CommandLine: 'wscript.exe "C:\Users\bob\AppData\Local\Microsoft\Windows\INetCache\Content.Outlook\A1B2C3D4\invoice.vbs"'
+  - name: not a process-creation event
+    event:
+      EventID: 4624
+      Image: 'C:\Windows\System32\wscript.exe'
+      CommandLine: 'wscript.exe "C:\Users\bob\Downloads\Chrome_Update_8842.js"'

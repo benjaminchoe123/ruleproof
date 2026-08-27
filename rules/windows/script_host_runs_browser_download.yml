@@ -1,0 +1,69 @@
+title: Windows Script Host Executing a Browser Download
+id: 9c4f1d38-6b02-4ae7-9f51-2d8a7c6e0b39
+status: experimental
+description: >
+  Detects wscript, cscript or mshta executing a file that arrived through the
+  browser — the Downloads folder, a browser's own download path, or the internet
+  cache. This is the host-side end of a drive-by: the compromised site serves a
+  fake update, the victim runs it, and a Windows script host interprets it. It is
+  the observed behaviour of ClearFake and FAKEUPDATES/SocGholish, which are what
+  T1189 actually looks like in this vault's data rather than in the abstract.
+
+  Three conditions hold together: the event is a process creation, the executing
+  image is a Windows script host, and its target sits in a browser-delivered
+  location. Each is guarded by a near-miss negative — a developer running node on
+  a .js in Downloads, an analyst opening the same file in an editor, a signed
+  logon script off NETLOGON — because a constraint no test can break is a
+  constraint the suite is not really checking.
+
+  Deliberately narrow in one place: a script run from the Outlook attachment
+  cache is excluded, even though that path sits under INetCache and would
+  otherwise match. Mail-delivered scripts are user execution of an attachment,
+  not a drive-by, and letting them fire here would inflate this rule's claim to
+  cover T1189 with detections of something else. That exclusion has its own test
+  case and its own mutation.
+
+  Written because `ruleproof gap` ranked T1189 the most-observed technique with
+  no demonstrated detection, once T1190 is set aside as deliberately undetected.
+  The contrast between the two is the point: T1190 is left alone because a
+  generic rule for exploiting a public-facing app could only pattern-match
+  invented exploit strings, while a drive-by, whatever the site or the lure,
+  ends with a script host running something the browser put on disk.
+references:
+  - https://attack.mitre.org/techniques/T1189/
+  - https://attack.mitre.org/software/S0468/
+author: Benjamin Choe
+date: 2026-08-27
+logsource:
+  product: windows
+  category: process_creation
+detection:
+  selection_host:
+    EventID: 4688
+    Image|endswith:
+      - '\wscript.exe'
+      - '\cscript.exe'
+      - '\mshta.exe'
+  selection_downloaded:
+    CommandLine|contains:
+      - '\Downloads\'
+      - '\INetCache\'
+      - '\Temporary Internet Files\'
+  filter_mail_attachment:
+    CommandLine|contains: '\Content.Outlook\'
+  condition: selection_host and selection_downloaded and not filter_mail_attachment
+falsepositives:
+  - >
+    Software vendors that ship a .vbs or .hta installer and expect the user to
+    download and run it. This is the main source of noise and it is real; the
+    practical tuning is to allowlist the specific script name or its signing
+    certificate, not to drop the download-location constraint.
+  - >
+    Help-desk procedures that have users download a remediation script and run
+    it by double-clicking. Worth finding and replacing regardless — it trains
+    users into exactly the behaviour this rule exists to catch.
+  - IT staff testing a downloaded script on their own workstation
+level: high
+tags:
+  - attack.initial_access
+  - attack.t1189
