@@ -172,6 +172,12 @@ MUTATIONS = [
         "    EventID: 4688\n",
         "",
     ),
+    (
+        "windows/scheduled_task_persistence.yml",
+        "drop the /create discriminator (fires on query, change and delete too)",
+        "    CommandLine|contains: ' /create'\n",
+        "",
+    ),
 ]
 
 

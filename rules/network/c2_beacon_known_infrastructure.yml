@@ -22,11 +22,7 @@ detection:
       - '182.92.78.7'
       - '80.190.77.86'
       - '50.116.42.10'
-  filter_internal:
-    DestinationIp|startswith:
-      - '10.'
-      - '192.168.'
-  condition: selection and not filter_internal
+  condition: selection
 falsepositives:
   - Indicator reuse after the host is reassigned to a legitimate tenant
   - Security tooling deliberately probing known-bad infrastructure

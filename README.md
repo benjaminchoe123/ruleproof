@@ -211,8 +211,59 @@ $ python scripts/mutation_check.py
   killed (missed detection)   windows/local_account_created_net.yml: forget the net1.exe alias (attacker evades by name)
   killed (refused to load)    linux/webserver_spawns_shell.yml: drop the parent-process constraint
   ...
-25 killed, 0 survived, 0 skipped
+26 killed, 0 survived, 0 skipped
 ```
+
+### Are the negatives guarding anything?
+
+`test` proves a rule stays silent on its negatives. It cannot tell a negative that nearly fired
+from one that shares nothing with the rule at all — and a suite of unrelated negatives reports
+exactly as green as a suite of sharp ones. That is the same shape as the untested-rule problem
+this project was built on: the result looks identical whether the check is doing work or not.
+
+`ruleproof negatives` measures **distance to firing** — how many of a rule's conditions would
+have to flip before it fires. A negative at distance 1 breaks exactly one thing, so it is the
+case that fails when that one thing is loosened. That is what makes it a guard.
+
+```console
+$ ruleproof negatives rules --strict
+
+scheduled_task_persistence.yml
+  weak (distance 2): querying tasks rather than creating one
+
+every constraint has a negative that fails when it is loosened.
+```
+
+Two findings, weighted differently on purpose:
+
+- an **unguarded constraint** is a defect — no negative fails when that condition is loosened, so
+  the condition is intended rather than tested. `--strict` exits 1 on these, and **this repo's CI
+  gates on it**;
+- a **weak negative** is a smell. It passes for no particular reason, but it is often a legitimate
+  realistic-benign case, so it is reported and does not fail the build.
+
+Distance is computed over the parsed condition, not by counting matched conditions, because a
+filter inverts the arithmetic: an event stopped *only* by `not filter_x` matches every condition
+in the rule and still does not fire. Counting matches would score the sharpest possible negative
+as the bluntest, which is how a well-meant metric ends up recommending that good tests be deleted.
+
+**It found two real defects on its first run, in rules whose suites were passing:**
+
+1. A **dead filter**. The C2 rule excluded RFC1918 destinations — but its indicator list is five
+   public addresses, so no event could ever satisfy both. The filter was unreachable, and the
+   negative that appeared to test it (`10.38.147.185`) matched no indicator either, so it tested
+   nothing. Deleted, because a condition that cannot fire is decoration implying protection. This
+   is the second time this repo has shipped a dead filter; the first was found by hand.
+2. A **negative that guarded nothing**, in the scheduled-task rule. The case named "deleting a
+   task that lives in AppData" was meant to pin the `/create` discriminator, but its command line
+   said `AppDataTask` — no `\AppData\` — so it broke both conditions instead of one and pinned
+   neither. Exactly the shape of the mutation that survived on 2026-08-26. Replaced with a case
+   that satisfies the path condition and fails only on the verb, and a matching mutation now
+   proves it.
+
+This is the mutation check's argument approached from the other side: mutation testing breaks the
+rule and asks whether the suite notices, while this reads the suite and asks whether it *could*.
+The second is much cheaper, so it can gate every push.
 
 This found two genuine holes the first time it ran, both in rules that were passing:
 

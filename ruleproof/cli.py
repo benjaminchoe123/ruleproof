@@ -1,4 +1,4 @@
-"""`ruleproof test`, `ruleproof coverage` and `ruleproof gap`.
+"""`ruleproof test`, `coverage`, `gap` and `negatives`.
 
 Exit codes are the product. This is meant to run in CI, so the important
 question is not what it prints but when it returns non-zero:
@@ -16,7 +16,8 @@ import argparse
 import sys
 from pathlib import Path
 
-from .harness import discover, run_all
+from .discrimination import unguarded_constraints, weakest_negatives
+from .harness import TestSuite, discover, run_all
 from .observed import ObservedError, coverage_gap, load_observed, unobserved
 
 
@@ -110,6 +111,62 @@ def _cmd_coverage(args):
     return 0
 
 
+def _cmd_negatives(args):
+    """Are the true_negatives guarding anything, or just present?
+
+    `test` proves a rule stays silent on its negatives. It cannot tell a negative
+    that nearly fired from one that shares nothing with the rule, and a suite of
+    unrelated negatives reports exactly as green as a suite of sharp ones.
+
+    Two findings, deliberately weighted differently:
+
+      unguarded constraint  a defect. No negative fails when this condition is
+                            loosened, so the condition is only intended, not
+                            tested. This is how a mutation survived here.
+      weak negative         a smell. It passes for no particular reason. Often a
+                            legitimate realistic-benign case, which is why it does
+                            not fail --strict on its own.
+    """
+    directory, error = _check_dir(args.rules_dir)
+    if error:
+        print(error, file=sys.stderr)
+        return 2
+
+    from .rule import Rule, RuleError
+
+    unguarded_total = 0
+    for found in discover(directory):
+        if found.test_path is None:
+            continue
+        try:
+            rule = Rule.from_file(found.rule_path)
+            suite = TestSuite.from_yaml(
+                found.test_path.read_text(encoding="utf-8"), found.test_path)
+        except (RuleError, OSError, ValueError) as exc:
+            print(f"  ERROR     {found.rule_path.name}: {exc}")
+            continue
+
+        unguarded = unguarded_constraints(rule.detection, suite.true_negatives)
+        weak = weakest_negatives(rule.detection, suite.true_negatives)
+        if not unguarded and not weak:
+            continue
+        print(f"\n{found.rule_path.name}")
+        if unguarded:
+            unguarded_total += len(unguarded)
+            print(f"  unguarded: {', '.join(unguarded)}")
+            print("             no negative fails when this is loosened")
+        for name, distance in weak:
+            print(f"  weak (distance {distance}): {name}")
+
+    if unguarded_total:
+        print(f"\n{unguarded_total} unguarded constraint(s): a condition nothing tests is a "
+              "condition that exists only in the author's intention.")
+        return 1 if args.strict else 0
+
+    print("\nevery constraint has a negative that fails when it is loosened.")
+    return 0
+
+
 def _cmd_gap(args):
     """Coverage against observed reality rather than against the rules' own claims.
 
@@ -195,6 +252,17 @@ def build_parser():
     p_cov = sub.add_parser("coverage", help="ATT&CK techniques claimed vs. demonstrated")
     p_cov.add_argument("rules_dir")
     p_cov.set_defaults(func=_cmd_coverage)
+
+    p_neg = sub.add_parser(
+        "negatives",
+        help="are the true_negatives guarding anything, or just present?",
+    )
+    p_neg.add_argument("rules_dir")
+    p_neg.add_argument(
+        "--strict", action="store_true",
+        help="exit 1 when a constraint has no negative pinning it",
+    )
+    p_neg.set_defaults(func=_cmd_negatives)
 
     p_gap = sub.add_parser(
         "gap",

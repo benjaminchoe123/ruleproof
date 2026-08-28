@@ -49,6 +49,12 @@ jobs:
         # would let coverage of the *evidenced* subset rot unnoticed, which is the
         # half that should actually drive which rule gets written next.
         run: python -m ruleproof.cli gap rules samples/observed-techniques-confirmed.txt --fail-under 48
+      - name: every constraint has a negative that pins it
+        # Cheaper and structural where the mutation check is exhaustive and slow:
+        # this reads the suite and asks whether it *could* catch a constraint being
+        # loosened, instead of loosening one and seeing. It found the dead filter in
+        # the C2 rule and a negative that meant to guard a constraint and did not.
+        run: python -m ruleproof.cli negatives rules --strict
       - name: test suites actually discriminate (mutation check)
         run: python scripts/mutation_check.py
 

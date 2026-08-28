@@ -107,3 +107,58 @@ def test_fail_under_message_never_reads_as_equal_to_the_threshold(tmp_path, caps
     fail_line = [ln for ln in capsys.readouterr().out.splitlines() if "FAIL" in ln][0]
     assert "34%" in fail_line
     assert "33.3%" in fail_line
+
+
+# --- ruleproof negatives ---------------------------------------------------
+
+def test_negatives_command_reports_an_unguarded_constraint(tmp_path, capsys):
+    """A rule whose suite passes while leaving a condition unpinned. `test` says
+    green because nothing fails; this says which constraint nothing is watching."""
+    rules = tmp_path / "rules"
+    rules.mkdir()
+    (rules / "r.yml").write_text(
+        "title: R\nlogsource: {product: windows}\ndetection:\n"
+        "  sel_a:\n    A: '1'\n  sel_b:\n    B: '2'\n"
+        "  condition: sel_a and sel_b\n", encoding="utf-8")
+    # The only negative breaks sel_b, so nothing guards sel_a.
+    (rules / "r.test.yml").write_text(
+        "true_positives:\n  - name: fires\n    event: {A: '1', B: '2'}\n"
+        "true_negatives:\n  - name: no b\n    event: {A: '1', B: 'x'}\n", encoding="utf-8")
+
+    assert main(["negatives", str(rules)]) == 0      # a report, not a gate
+    out = capsys.readouterr().out
+    assert "sel_a" in out
+    assert "sel_b" not in out.split("unguarded")[-1]
+
+
+def test_negatives_strict_turns_the_report_into_a_gate(tmp_path):
+    rules = tmp_path / "rules"
+    rules.mkdir()
+    (rules / "r.yml").write_text(
+        "title: R\nlogsource: {product: windows}\ndetection:\n"
+        "  sel_a:\n    A: '1'\n  sel_b:\n    B: '2'\n"
+        "  condition: sel_a and sel_b\n", encoding="utf-8")
+    (rules / "r.test.yml").write_text(
+        "true_positives:\n  - name: fires\n    event: {A: '1', B: '2'}\n"
+        "true_negatives:\n  - name: no b\n    event: {A: '1', B: 'x'}\n", encoding="utf-8")
+    assert main(["negatives", str(rules), "--strict"]) == 1
+
+
+def test_negatives_is_clean_when_every_constraint_is_guarded(tmp_path, capsys):
+    rules = tmp_path / "rules"
+    rules.mkdir()
+    (rules / "r.yml").write_text(
+        "title: R\nlogsource: {product: windows}\ndetection:\n"
+        "  sel_a:\n    A: '1'\n  sel_b:\n    B: '2'\n"
+        "  condition: sel_a and sel_b\n", encoding="utf-8")
+    (rules / "r.test.yml").write_text(
+        "true_positives:\n  - name: fires\n    event: {A: '1', B: '2'}\n"
+        "true_negatives:\n"
+        "  - name: no b\n    event: {A: '1', B: 'x'}\n"
+        "  - name: no a\n    event: {A: 'x', B: '2'}\n", encoding="utf-8")
+    assert main(["negatives", str(rules), "--strict"]) == 0
+    assert "every constraint" in capsys.readouterr().out
+
+
+def test_negatives_on_a_missing_directory_is_a_usage_error(tmp_path):
+    assert main(["negatives", str(tmp_path / "nope")]) == 2

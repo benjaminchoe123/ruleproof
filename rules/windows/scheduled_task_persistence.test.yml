@@ -21,8 +21,14 @@ true_negatives:
       EventID: 4688
       Image: 'C:\Windows\System32\schtasks.exe'
       CommandLine: 'schtasks /query /fo LIST'
-  - name: deleting a task that lives in AppData
+  # Guards `selection`: it satisfies the user-writable-path condition and fails
+  # only on the verb, so loosening the ' /create' discriminator fails here. The
+  # case this replaced meant to do exactly that and did not -- its command line
+  # said 'AppDataTask', which contains no '\AppData\', so it broke both
+  # conditions and guarded neither. Same shape as the mutation that survived on
+  # 2026-08-26: a constraint protected by a test that asserted nothing about it.
+  - name: repointing an existing task at a user-profile binary, not creating one
     event:
       EventID: 4688
       Image: 'C:\Windows\System32\schtasks.exe'
-      CommandLine: 'schtasks /delete /tn AppDataTask /f'
+      CommandLine: 'schtasks /change /tn CorpUpdater /tr "C:\Users\bob\AppData\Local\Corp\updater.exe"'
