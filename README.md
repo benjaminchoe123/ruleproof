@@ -211,7 +211,7 @@ $ python scripts/mutation_check.py
   killed (missed detection)   windows/local_account_created_net.yml: forget the net1.exe alias (attacker evades by name)
   killed (refused to load)    linux/webserver_spawns_shell.yml: drop the parent-process constraint
   ...
-21 killed, 0 survived, 0 skipped
+25 killed, 0 survived, 0 skipped
 ```
 
 This found two genuine holes the first time it ran, both in rules that were passing:
