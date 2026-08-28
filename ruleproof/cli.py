@@ -17,7 +17,7 @@ import sys
 from pathlib import Path
 
 from .discrimination import unguarded_constraints, weakest_negatives
-from .harness import TestSuite, discover, duplicate_ids, run_all
+from .harness import TestSuite, dead_conditions, discover, duplicate_ids, run_all
 from .observed import ObservedError, coverage_gap, load_observed, unobserved
 
 
@@ -63,6 +63,11 @@ def _cmd_test(args):
     for path in report.orphaned:
         print(f"  ORPHANED  {path}  (test file with no rule beside it)")
 
+    dead = dead_conditions(directory)
+    for path, unused in dead:
+        print(f"  DEAD CONDITION  {path.name}: {', '.join(unused)}")
+        print("                  defined but never used by the condition")
+
     dupes = duplicate_ids(directory)
     for rule_id, paths in dupes:
         print(f"  DUPLICATE ID  {rule_id}")
@@ -74,10 +79,20 @@ def _cmd_test(args):
         f"\n{report.tested} rule(s) tested, {cases} case(s), "
         f"{len(report.failures)} failure(s), {len(report.untested)} untested, "
         f"{len(report.orphaned)} orphaned, {len(dupes)} duplicate id(s), "
-        f"{len(report.load_errors)} error(s)"
+        f"{len(dead)} dead condition(s), {len(report.load_errors)} error(s)"
     )
 
     if report.failures or report.load_errors:
+        return 1
+    if dead:
+        # The parser already refuses an identifier used without being defined.
+        # This is the reverse and the more dangerous half, because it is the
+        # silent one: a filter block the condition forgets to mention reads
+        # exactly like protection and does nothing at all.
+        print(
+            "\ndead condition(s): a search block the condition never mentions has no "
+            "effect, and is worse than absent because it looks like protection"
+        )
         return 1
     if dupes:
         # Like orphans, deliberately outside --allow-untested. A SIEM keys on the

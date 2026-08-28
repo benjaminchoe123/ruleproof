@@ -173,3 +173,78 @@ def test_missing_condition_is_an_error():
 def test_unsupported_aggregate_is_an_error_not_a_silent_false():
     with pytest.raises(ConditionError):
         det(a={"EventID": 4688}, condition="2 of them").matches(PROC)
+
+
+# --- defined but never referenced -------------------------------------------
+# The condition language already refuses an identifier that is *used* without
+# being defined. The reverse -- defined and never used -- was silently fine, and
+# it is the more dangerous of the two: a `filter_` block that the condition
+# forgets to mention reads exactly like protection and does nothing at all. This
+# repo has already shipped two dead conditions by other mechanisms.
+
+def test_a_search_identifier_never_used_by_the_condition_is_reported():
+    detection = Detection.from_dict({
+        "selection": {"A": "1"},
+        "filter_forgotten": {"B": "2"},
+        "condition": "selection",
+    })
+    assert detection.unused_identifiers() == ["filter_forgotten"]
+
+
+def test_every_unused_identifier_is_named_not_just_the_first():
+    detection = Detection.from_dict({
+        "selection": {"A": "1"},
+        "filter_a": {"B": "2"},
+        "filter_b": {"C": "3"},
+        "condition": "selection",
+    })
+    assert detection.unused_identifiers() == ["filter_a", "filter_b"]
+
+
+def test_a_rule_using_everything_it_defines_reports_nothing():
+    detection = Detection.from_dict({
+        "selection": {"A": "1"},
+        "filter_x": {"B": "2"},
+        "condition": "selection and not filter_x",
+    })
+    assert detection.unused_identifiers() == []
+
+
+def test_an_unused_block_still_loads_and_still_matches():
+    """Reported, not raised. The rule works; it just carries dead weight, and
+    refusing to load somebody else's working rule set is heavier than the defect
+    warrants."""
+    detection = Detection.from_dict({
+        "selection": {"A": "1"},
+        "filter_forgotten": {"B": "2"},
+        "condition": "selection",
+    })
+    assert detection.matches({"A": "1"}) is True
+
+
+def test_an_identifier_reached_only_through_a_wildcard_counts_as_used():
+    """`1 of selection_*` uses them, even though no name appears literally."""
+    detection = Detection.from_dict({
+        "selection_a": {"A": "1"},
+        "selection_b": {"B": "2"},
+        "condition": "1 of selection_*",
+    })
+    assert detection.unused_identifiers() == []
+
+
+def test_all_of_them_uses_everything():
+    detection = Detection.from_dict({
+        "selection": {"A": "1"},
+        "other": {"B": "2"},
+        "condition": "all of them",
+    })
+    assert detection.unused_identifiers() == []
+
+
+def test_an_identifier_used_only_under_a_negation_counts_as_used():
+    detection = Detection.from_dict({
+        "selection": {"A": "1"},
+        "filter_x": {"B": "2"},
+        "condition": "selection and not filter_x",
+    })
+    assert detection.unused_identifiers() == []

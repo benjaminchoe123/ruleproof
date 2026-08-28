@@ -8,7 +8,7 @@ thing it was written for, and stays quiet on the things it wasn't.
 
 ```console
 $ ruleproof test rules
-11 rule(s) tested, 105 case(s), 0 failure(s), 0 untested, 0 orphaned, 0 duplicate id(s), 0 error(s)
+11 rule(s) tested, 105 case(s), 0 failure(s), 0 untested, 0 orphaned, 0 duplicate id(s), 0 dead condition(s), 0 error(s)
 $ echo $?
 0
 ```
@@ -22,8 +22,9 @@ $ ruleproof test rules      # after someone loosens a rule
   UNTESTED  rules/windows/lsass_dump.yml
   ORPHANED  rules/windows/renamed_rule.test.yml  (test file with no rule beside it)
   DUPLICATE ID  6b1e0a54-2c9e-4b7a-9a1f-0f2b1c4d5e01
+  DEAD CONDITION  rules/windows/lsass_dump.yml: filter_backup_agent
 
-6 rule(s) tested, 49 case(s), 1 failure(s), 1 untested, 1 orphaned, 1 duplicate id(s), 0 error(s)
+6 rule(s) tested, 49 case(s), 1 failure(s), 1 untested, 1 orphaned, 1 duplicate id(s), 1 dead condition(s), 0 error(s)
 
 untested rules are failures by default; pass --allow-untested to tolerate them
 $ echo $?
@@ -50,6 +51,19 @@ to act on them:
 |---|---|---|
 | **missed detection** | a `true_positives` case did not fire | the rule was silent during the thing it exists to catch |
 | **false positive** | a `true_negatives` case fired | this is how a rule gets muted in production, after which it protects nothing |
+
+A fourth is the quietest of all: a **dead condition** — a search block the rule defines and the
+condition never mentions. The rule loads, matches correctly, and passes its tests; the block simply
+is never consulted. That reads exactly like protection and is nothing, which is this repo's whole
+argument in miniature. The condition parser already refuses the *opposite* mistake — an identifier
+used without being defined — so the dangerous half was the silent one. Now both fail the build.
+
+It is reported rather than refused at load time, deliberately. Such a rule still works, and
+refusing to read somebody else's functioning rule set over dead weight is a heavier response than
+the defect warrants. `test` fails on it, which is where a policy decision belongs rather than in a
+parser. **This one also found nothing here** — it exists because this repo has already shipped two
+dead conditions by *other* mechanisms, one filter that could never match and one that could never
+be reached, and this is the third mechanism in that family.
 
 A third failure is visible only across the whole set: two rules claiming the same Sigma **id**.
 Each rule is individually valid and both pass their own tests, so per-file validation cannot see

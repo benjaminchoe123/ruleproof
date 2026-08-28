@@ -189,3 +189,34 @@ def test_allow_untested_does_not_excuse_a_duplicate_id(tmp_path):
     (rules / "copy_of_rule.test.yml").write_text(
         (rules / "net_user_add.test.yml").read_text(encoding="utf-8"), encoding="utf-8")
     assert main(["test", str(rules), "--allow-untested"]) == 1
+
+
+def test_a_rule_with_a_search_block_nothing_uses_fails_the_build(tmp_path, capsys):
+    """The rule loads and matches correctly -- that is the point. Its filter is
+    simply never consulted, which reads like protection and is not."""
+    rules = tmp_path / "rules"
+    rules.mkdir()
+    (rules / "r.yml").write_text(
+        "title: R\nlogsource: {product: windows}\ndetection:\n"
+        "  sel:\n    A: '1'\n  filter_forgotten:\n    B: '2'\n"
+        "  condition: sel\n", encoding="utf-8")
+    (rules / "r.test.yml").write_text(
+        "true_positives:\n  - name: fires\n    event: {A: '1'}\n"
+        "true_negatives:\n  - name: quiet\n    event: {A: 'x'}\n", encoding="utf-8")
+
+    assert main(["test", str(rules)]) == 1
+    out = capsys.readouterr().out
+    assert "DEAD CONDITION" in out
+    assert "filter_forgotten" in out
+
+
+def test_allow_untested_does_not_excuse_a_dead_condition(tmp_path):
+    rules = tmp_path / "rules"
+    rules.mkdir()
+    (rules / "r.yml").write_text(
+        "title: R\nlogsource: {product: windows}\ndetection:\n"
+        "  sel:\n    A: '1'\n  filter_forgotten:\n    B: '2'\n"
+        "  condition: sel\n", encoding="utf-8")
+    (rules / "r.test.yml").write_text(
+        "true_positives:\n  - name: fires\n    event: {A: '1'}\n", encoding="utf-8")
+    assert main(["test", str(rules), "--allow-untested"]) == 1

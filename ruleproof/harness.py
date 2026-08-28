@@ -254,3 +254,28 @@ def duplicate_ids(rules_dir):
             continue
         seen.setdefault(str(rule_id), []).append(found.rule_path)
     return [(rule_id, paths) for rule_id, paths in sorted(seen.items()) if len(paths) > 1]
+
+
+def dead_conditions(rules_dir):
+    """[(path, [identifiers])] for rules defining a search block nothing uses.
+
+    The condition parser already refuses an identifier that is *used* without
+    being defined. This is the reverse, and the more dangerous of the two because
+    it is the silent one: a `filter_` block the condition forgets to mention
+    reads exactly like protection and does nothing at all.
+
+    Reported here rather than refused at load time. Such a rule still loads and
+    still matches correctly, so refusing to read somebody else's working rule set
+    over it is heavier than the defect warrants -- `test` fails the build instead,
+    which is where a policy decision belongs.
+    """
+    dead = []
+    for found in discover(rules_dir):
+        try:
+            rule = Rule.from_file(found.rule_path)
+        except RuleError:
+            continue  # `test` already reports this one as broken
+        unused = rule.detection.unused_identifiers()
+        if unused:
+            dead.append((found.rule_path, unused))
+    return dead

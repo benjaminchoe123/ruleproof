@@ -147,6 +147,21 @@ class _Parser:
         return tuple(names)
 
 
+def _referenced(node, found):
+    """Every search identifier the parsed condition actually reaches."""
+    kind = node[0]
+    if kind == "id":
+        found.add(node[1])
+    elif kind == "not":
+        _referenced(node[1], found)
+    elif kind in ("and", "or"):
+        _referenced(node[1], found)
+        _referenced(node[2], found)
+    elif kind == "agg":
+        found.update(node[2])
+    return found
+
+
 def _parse(text, names):
     tokens = _TOKENS.findall(text)
     if not tokens:
@@ -180,6 +195,22 @@ class Detection:
         if not searches:
             raise ConditionError("detection block defines no search identifiers")
         return cls(searches, str(condition), _parse(str(condition), set(searches)))
+
+    def unused_identifiers(self):
+        """Search identifiers the condition never reaches.
+
+        A `filter_` block the condition forgets to mention reads exactly like
+        protection and does nothing whatsoever, which is the failure this project
+        exists to name. The parser already refuses the reverse -- an identifier
+        used without being defined -- so this closes an asymmetry where the more
+        dangerous half was the silent one.
+
+        Reported rather than raised. An unused block still leaves a rule that
+        loads and matches correctly, and refusing to load somebody else's
+        working rule set is a heavier response than the defect warrants; `test`
+        fails the build on it instead.
+        """
+        return sorted(set(self.searches) - _referenced(self.ast, set()))
 
     def matches(self, event):
         return self._eval(self.ast, event)
