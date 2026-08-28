@@ -8,7 +8,7 @@ thing it was written for, and stays quiet on the things it wasn't.
 
 ```console
 $ ruleproof test rules
-11 rule(s) tested, 105 case(s), 0 failure(s), 0 untested, 0 orphaned, 0 error(s)
+11 rule(s) tested, 105 case(s), 0 failure(s), 0 untested, 0 orphaned, 0 duplicate id(s), 0 error(s)
 $ echo $?
 0
 ```
@@ -21,8 +21,9 @@ $ ruleproof test rules      # after someone loosens a rule
          false positive: querying one account - contains ' user ' but no /add
   UNTESTED  rules/windows/lsass_dump.yml
   ORPHANED  rules/windows/renamed_rule.test.yml  (test file with no rule beside it)
+  DUPLICATE ID  6b1e0a54-2c9e-4b7a-9a1f-0f2b1c4d5e01
 
-6 rule(s) tested, 49 case(s), 1 failure(s), 1 untested, 1 orphaned, 0 error(s)
+6 rule(s) tested, 49 case(s), 1 failure(s), 1 untested, 1 orphaned, 1 duplicate id(s), 0 error(s)
 
 untested rules are failures by default; pass --allow-untested to tolerate them
 $ echo $?
@@ -49,6 +50,19 @@ to act on them:
 |---|---|---|
 | **missed detection** | a `true_positives` case did not fire | the rule was silent during the thing it exists to catch |
 | **false positive** | a `true_negatives` case fired | this is how a rule gets muted in production, after which it protects nothing |
+
+A third failure is visible only across the whole set: two rules claiming the same Sigma **id**.
+Each rule is individually valid and both pass their own tests, so per-file validation cannot see
+it — but a SIEM keys on that UUID, so importing both silently keeps one. The survivor looks
+healthy and the loser is simply absent: a rule that never fires while appearing to exist, which is
+the thing this repo exists to make visible. It fails the build, and like orphans it is **not**
+covered by `--allow-untested`, because adopting somebody else's rule set explains rules without
+tests but not two rules claiming one identity. Rules with no id are ignored — absent is not
+duplicated.
+
+It found nothing on this rule set, which is worth stating plainly. It was added because six of the
+eleven ids differ only in their last two hex digits, which is what hand-incremented ids look like
+just before someone copies a file and forgets.
 
 A third kind was added after the tool caught it happening here: an **orphaned** test file,
 one with no rule beside it. It is the mirror of an untested rule and the same failure in the

@@ -162,3 +162,30 @@ def test_negatives_is_clean_when_every_constraint_is_guarded(tmp_path, capsys):
 
 def test_negatives_on_a_missing_directory_is_a_usage_error(tmp_path):
     assert main(["negatives", str(tmp_path / "nope")]) == 2
+
+
+def test_two_rules_sharing_a_sigma_id_fail_the_build(tmp_path, capsys):
+    """Both rules are individually valid and both pass their tests. The defect is
+    only visible across the set: a SIEM keys on the id, so one silently replaces
+    the other and never fires."""
+    rules = build(tmp_path)
+    original = (rules / "net_user_add.yml").read_text(encoding="utf-8")
+    (rules / "copy_of_rule.yml").write_text(original, encoding="utf-8")
+    (rules / "copy_of_rule.test.yml").write_text(
+        (rules / "net_user_add.test.yml").read_text(encoding="utf-8"), encoding="utf-8")
+
+    assert main(["test", str(rules)]) == 1
+    out = capsys.readouterr().out
+    assert "DUPLICATE ID" in out
+    assert "never fires" in out
+
+
+def test_allow_untested_does_not_excuse_a_duplicate_id(tmp_path):
+    """Adopting somebody else's rule set explains rules without tests. It does
+    not explain two rules claiming the same identity."""
+    rules = build(tmp_path)
+    original = (rules / "net_user_add.yml").read_text(encoding="utf-8")
+    (rules / "copy_of_rule.yml").write_text(original, encoding="utf-8")
+    (rules / "copy_of_rule.test.yml").write_text(
+        (rules / "net_user_add.test.yml").read_text(encoding="utf-8"), encoding="utf-8")
+    assert main(["test", str(rules), "--allow-untested"]) == 1

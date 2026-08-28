@@ -223,3 +223,34 @@ def run_all(rules_dir):
             # Coverage means "demonstrated to work", not "a file exists".
             report.covered_techniques.update(rule.techniques)
     return report
+
+
+def duplicate_ids(rules_dir):
+    """[(id, [paths])] for any Sigma id claimed by more than one rule.
+
+    A Sigma `id` is a UUID that SIEMs and rule managers key on. Two rules sharing
+    one means an import silently keeps a single rule: the survivor looks healthy
+    and the loser is simply absent. That is a rule which never fires while
+    appearing to exist, which is the failure this whole project is built to make
+    visible — and per-file validation cannot see it, because each rule is
+    individually valid.
+
+    Rules with no id are ignored. Absent is not duplicated: they cannot replace
+    each other on a key that does not exist, and inventing a policy about missing
+    ids is a different decision from catching a collision.
+
+    A rule that will not parse is skipped rather than raised on. `test` already
+    reports it as broken, and one unreadable file must not blind the scan to a
+    real collision elsewhere.
+    """
+    seen = {}
+    for found in discover(rules_dir):
+        try:
+            rule = Rule.from_file(found.rule_path)
+        except RuleError:
+            continue
+        rule_id = rule.id
+        if not rule_id:
+            continue
+        seen.setdefault(str(rule_id), []).append(found.rule_path)
+    return [(rule_id, paths) for rule_id, paths in sorted(seen.items()) if len(paths) > 1]

@@ -15,7 +15,14 @@ category rather than being quietly counted as passing.
 
 import pytest
 
-from ruleproof.harness import HarnessError, TestSuite, discover, run_all, run_suite
+from ruleproof.harness import (
+    HarnessError,
+    TestSuite,
+    discover,
+    duplicate_ids,
+    run_all,
+    run_suite,
+)
 from ruleproof.rule import Rule
 
 RULE_YAML = """
@@ -244,3 +251,59 @@ def test_a_yaml_suffixed_rule_still_claims_its_test_file(tmp_path):
     (rules / "real.yaml").write_text(RULE_YAML, encoding="utf-8")
     (rules / "real.test.yml").write_text(SUITE_YAML, encoding="utf-8")
     assert run_all(rules).orphaned == []
+
+
+# --- set-level integrity: duplicate rule ids -------------------------------
+# A Sigma `id` is a UUID that SIEMs and rule managers key on, so two rules
+# sharing one means an import silently keeps a single rule. The survivor looks
+# healthy and the loser is simply absent -- a rule that never fires, which is the
+# exact failure this project exists to make visible. Per-file validation cannot
+# see it: each rule is individually valid.
+
+def _rule_with_id(rule_id, title="R"):
+    return (f"title: {title}\nid: {rule_id}\nlogsource: {{product: windows}}\n"
+            "detection:\n  sel:\n    A: '1'\n  condition: sel\n")
+
+
+def test_no_duplicate_ids_is_reported_as_empty(tmp_path):
+    (tmp_path / "a.yml").write_text(_rule_with_id("11111111-1111-4111-8111-111111111111"),
+                                    encoding="utf-8")
+    (tmp_path / "b.yml").write_text(_rule_with_id("22222222-2222-4222-8222-222222222222"),
+                                    encoding="utf-8")
+    assert duplicate_ids(tmp_path) == []
+
+
+def test_two_rules_sharing_an_id_are_reported(tmp_path):
+    same = "11111111-1111-4111-8111-111111111111"
+    (tmp_path / "a.yml").write_text(_rule_with_id(same, "First"), encoding="utf-8")
+    (tmp_path / "b.yml").write_text(_rule_with_id(same, "Second"), encoding="utf-8")
+    dupes = duplicate_ids(tmp_path)
+    assert len(dupes) == 1
+    rule_id, paths = dupes[0]
+    assert rule_id == same
+    assert [p.name for p in paths] == ["a.yml", "b.yml"]
+
+
+def test_rules_without_an_id_are_not_treated_as_colliding(tmp_path):
+    """Absent is not duplicated. Two rules with no id cannot silently replace
+    each other on a key that does not exist, and inventing a policy about
+    missing ids is not this check's job."""
+    body = "title: R\nlogsource: {product: windows}\ndetection:\n  sel:\n    A: '1'\n  condition: sel\n"
+    (tmp_path / "a.yml").write_text(body, encoding="utf-8")
+    (tmp_path / "b.yml").write_text(body, encoding="utf-8")
+    assert duplicate_ids(tmp_path) == []
+
+
+def test_an_unreadable_rule_does_not_break_the_id_scan(tmp_path):
+    (tmp_path / "good.yml").write_text(_rule_with_id("11111111-1111-4111-8111-111111111111"),
+                                       encoding="utf-8")
+    (tmp_path / "broken.yml").write_text("title: [unclosed\n", encoding="utf-8")
+    assert duplicate_ids(tmp_path) == []
+
+
+def test_test_files_are_not_scanned_for_ids(tmp_path):
+    """A .test.yml is not a rule. Scanning it would report phantom collisions."""
+    same = "11111111-1111-4111-8111-111111111111"
+    (tmp_path / "a.yml").write_text(_rule_with_id(same), encoding="utf-8")
+    (tmp_path / "a.test.yml").write_text(f"# id: {same}\ntrue_positives: []\n", encoding="utf-8")
+    assert duplicate_ids(tmp_path) == []

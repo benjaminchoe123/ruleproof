@@ -17,7 +17,7 @@ import sys
 from pathlib import Path
 
 from .discrimination import unguarded_constraints, weakest_negatives
-from .harness import TestSuite, discover, run_all
+from .harness import TestSuite, discover, duplicate_ids, run_all
 from .observed import ObservedError, coverage_gap, load_observed, unobserved
 
 
@@ -63,14 +63,31 @@ def _cmd_test(args):
     for path in report.orphaned:
         print(f"  ORPHANED  {path}  (test file with no rule beside it)")
 
+    dupes = duplicate_ids(directory)
+    for rule_id, paths in dupes:
+        print(f"  DUPLICATE ID  {rule_id}")
+        for path in paths:
+            print(f"                {path}")
+
     cases = sum(r.total for r in report.results)
     print(
         f"\n{report.tested} rule(s) tested, {cases} case(s), "
         f"{len(report.failures)} failure(s), {len(report.untested)} untested, "
-        f"{len(report.orphaned)} orphaned, {len(report.load_errors)} error(s)"
+        f"{len(report.orphaned)} orphaned, {len(dupes)} duplicate id(s), "
+        f"{len(report.load_errors)} error(s)"
     )
 
     if report.failures or report.load_errors:
+        return 1
+    if dupes:
+        # Like orphans, deliberately outside --allow-untested. A SIEM keys on the
+        # Sigma id, so two rules sharing one means an import silently keeps a
+        # single rule -- the survivor looks healthy and the loser simply is not
+        # there. Adopting someone else's rule set does not explain that.
+        print(
+            "\nduplicate rule id(s): a SIEM keys on the Sigma id, so one of these "
+            "silently replaces the other on import and never fires"
+        )
         return 1
     if report.orphaned:
         # Deliberately not covered by --allow-untested. Adopting somebody else's
