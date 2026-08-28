@@ -148,6 +148,30 @@ MUTATIONS = [
         "    EventID: 4688\n",
         "",
     ),
+    (
+        "windows/browser_credential_store_copied.yml",
+        "drop the credential-store constraint (fires on any copy)",
+        "  condition: selection_tool and selection_store",
+        "  condition: selection_tool",
+    ),
+    (
+        "windows/browser_credential_store_copied.yml",
+        "match the store loosely as 'Login' instead of the filename",
+        "      - '\\Login Data'",
+        "      - 'Login'",
+    ),
+    (
+        "windows/browser_credential_store_copied.yml",
+        "look for the copy tool anywhere in the event, not as the executing image",
+        "    Image|endswith:\n      - '\\esentutl.exe'\n      - '\\cmd.exe'\n      - '\\powershell.exe'\n      - '\\pwsh.exe'\n      - '\\robocopy.exe'\n      - '\\xcopy.exe'",
+        "    CommandLine|contains:\n      - 'esentutl'\n      - 'cmd'\n      - 'powershell'\n      - 'pwsh'\n      - 'robocopy'\n      - 'xcopy'",
+    ),
+    (
+        "windows/browser_credential_store_copied.yml",
+        "forget the process-creation constraint (matches any event type)",
+        "    EventID: 4688\n",
+        "",
+    ),
 ]
 
 

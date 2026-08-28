@@ -8,7 +8,7 @@ thing it was written for, and stays quiet on the things it wasn't.
 
 ```console
 $ ruleproof test rules
-10 rule(s) tested, 93 case(s), 0 failure(s), 0 untested, 0 orphaned, 0 error(s)
+11 rule(s) tested, 105 case(s), 0 failure(s), 0 untested, 0 orphaned, 0 error(s)
 $ echo $?
 0
 ```
@@ -76,9 +76,9 @@ cloned:
 ```console
 $ ruleproof gap rules samples/observed-techniques.txt --limit 3
 Observed techniques      : 43
-Demonstrated by rules    : 10
-Observed AND detected    : 15  (35%)
-Observed, NOT detected   : 28
+Demonstrated by rules    : 11
+Observed AND detected    : 17  (40%)
+Observed, NOT detected   : 26
 
 COVERED - seen in the data and provably detected
   ...
@@ -87,9 +87,9 @@ GAP - most-observed techniques with no demonstrated detection
   T1190          25 source(s)
   T1056.001       4 source(s)
   T1068           4 source(s)
-  ... and 25 more (--limit to show)
+  ... and 23 more (--limit to show)
 
-2 of 10 demonstrated technique(s) were never observed in this data: T1053.005, T1136.001
+2 of 11 demonstrated technique(s) were never observed in this data: T1053.005, T1136.001
   Not wrong on its own, but if it is most of the rule set the rules were chosen from
   general knowledge rather than from the evidence in hand.
 ```
@@ -141,8 +141,8 @@ So the same rules are measured against both standards, and both are gated in CI:
 
 | | observed | detected | coverage |
 |---|---|---|---|
-| every sighting | 43 | 15 | **35%** |
-| only sightings the source did not flag | 24 | 10 | **42%** |
+| every sighting | 43 | 17 | **40%** |
+| only sightings the source did not flag | 24 | 12 | **50%** |
 
 Coverage goes **up** under the stricter standard, which is the opposite of convenient: the
 inferred mappings are mostly obscure recon and infrastructure techniques that nothing detects,
@@ -312,6 +312,7 @@ near-miss negatives:
 | Remote access tool from a user-writable path | T1219 | **chosen by `gap`** |
 | LOLBin downloading to a user-writable path | T1105 | **chosen by `gap`** |
 | Script host executing a browser download | T1189 | **chosen by `gap`** |
+| Browser credential store copied by another process | T1555.003 | **chosen by `gap`** |
 
 They are drawn from activity in the [threat-intel-pipeline][pipeline] weekly reports —
 the ClickFix rule covers the SmartApeSG/ClearFake/FAKEUPDATES delivery chain, the web-shell
@@ -353,6 +354,30 @@ cache** is filtered out, even though it sits under the same `INetCache` path a b
 does. Mail-delivered scripts are user execution of an attachment, not a drive-by; letting them
 fire would let this rule claim T1189 coverage using detections of something else. The exclusion
 has its own near-miss test case and its own mutation.
+
+### Three reasons a gap stays open, and why naming them matters
+
+Working down the ranked gap produced something more useful than the next rule: the undetected
+techniques are not undetected for one reason, and lumping them together is what lets a coverage
+number hide behind "detection is hard". Three of the top four are left alone deliberately, each
+for a different and stateable reason.
+
+| technique | why it is open | could a rule close it? |
+|---|---|---|
+| **T1190** Exploit Public-Facing Application | **Product-shaped.** The observable is a request to a specific application, and it differs per product. | Yes, one product at a time — never generically. |
+| **T1068** Exploitation for Privilege Escalation | **Outcome-shaped.** It names a *result*, not a behaviour. Detecting it means detecting the specific exploit (product-shaped again) or the post-conditions, which are other techniques with their own IDs. | No. A rule tagged T1068 here would be a token-manipulation or UAC-bypass detection wearing the wrong label. |
+| **T1056.001** Keylogging | **Telemetry-shaped.** The behaviour is real and uniform, and invisible in the log sources these rules read. Keystroke capture happens through API hooks, not process creation. | Yes, given ETW or API-level telemetry. Not from a 4688 stream, whatever the rule says. |
+| **T1555.003** Credentials from Web Browsers | Nothing — it is none of the three. | **Written.** See the table above. |
+
+The outcome-shaped case is the one worth dwelling on, because it is the easiest to fake. It
+would be trivial to write a plausible-looking T1068 rule, watch coverage rise, and never notice
+that the rule detects something else with a different ATT&CK ID stapled to it. That is the same
+move this repo already refuses in a smaller place — the T1189 rule excludes the Outlook
+attachment cache for exactly that reason — and refusing it consistently is what stops the
+coverage number becoming decoration.
+
+A technique left open for a *named* reason is a different object from one nobody got to.
+Both show as gaps in the number; only one of them is an answer.
 
 Writing it also produced the most useful decision in the rule set. The same week's data carried
 C2 on ports **8080** and **4307**, and both are deliberately excluded: 8080 is ordinary

@@ -42,13 +42,13 @@ jobs:
         # activity regresses. The sample is a snapshot of what the threat-intel
         # pipeline saw, so the threshold is deliberately just under the current
         # figure -- it catches a rule being deleted or narrowed into uselessness.
-        run: python -m ruleproof.cli gap rules samples/observed-techniques.txt --fail-under 33
+        run: python -m ruleproof.cli gap rules samples/observed-techniques.txt --fail-under 38
       - name: ...and against the subset the source did not flag as inference
         # Half the sightings in the sample above come from notes whose own author
         # marked them as going beyond their source. Gating only the looser number
         # would let coverage of the *evidenced* subset rot unnoticed, which is the
         # half that should actually drive which rule gets written next.
-        run: python -m ruleproof.cli gap rules samples/observed-techniques-confirmed.txt --fail-under 40
+        run: python -m ruleproof.cli gap rules samples/observed-techniques-confirmed.txt --fail-under 48
       - name: test suites actually discriminate (mutation check)
         run: python scripts/mutation_check.py
 
